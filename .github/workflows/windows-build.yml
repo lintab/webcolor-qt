@@ -1,0 +1,60 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.8.0'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_msvc2022_64'
+        modules: 'qtnetworkauth'
+        cache: true
+
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Build
+      run: |
+        mkdir build-win
+        cd build-win
+        cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}"
+        nmake
+
+    - name: Package Qt dependencies
+      run: |
+        cd build-win
+        windeployqt WebColorQt.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: WebColorQt-Windows
+        path: build-win/
+        retention-days: 30
+
+    - name: Create release zip
+      run: |
+        cd build-win
+        7z a ../WebColorQt-Windows.zip *
+
+    - name: Upload release package
+      uses: actions/upload-artifact@v4
+      with:
+        name: WebColorQt-Windows-Zip
+        path: WebColorQt-Windows.zip
+        retention-days: 30
