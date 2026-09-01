@@ -1,0 +1,15 @@
+.DS_Store
+build-win/
+installer-output/
+*.exe
+*.dll
+*.pdb
+build/
+*.user
+CMakeLists.txt.user
+.qmake.stash
+*.o
+*.obj
+moc_*.cpp
+ui_*.h
+qrc_*.cpp

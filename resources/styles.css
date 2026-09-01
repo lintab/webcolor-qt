@@ -1,0 +1,485 @@
+/* ============================================================
+   Qt StyleSheet —— 移植自 HTML 版本的 base.css / login.css / main.css
+   ============================================================ */
+
+/* ---------- 全局基础 ---------- */
+QWidget {
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    color: #1a2332;
+}
+
+QMainWindow {
+    background: #f0f2f5;
+}
+
+/* ---------- 滚动条 ---------- */
+QScrollBar:vertical {
+    background: #f0f2f5;
+    width: 10px;
+    margin: 0;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical {
+    background: #606266;
+    min-height: 30px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #4a4c50;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+QScrollBar:horizontal {
+    background: #f0f2f5;
+    height: 10px;
+    margin: 0;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #606266;
+    min-width: 30px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #4a4c50;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: none;
+}
+
+/* ---------- 登录页 ---------- */
+#loginPage {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #052c4d, stop:0.45 #0d4f8b, stop:1 #1a6ec9);
+}
+
+#loginCard {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 32px;
+}
+
+#loginTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a2332;
+    margin-bottom: 20px;
+}
+
+#appName {
+    font-size: 30px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 2px;
+}
+
+#slogan {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 210);
+}
+
+/* 登录输入框 */
+.login-input {
+    background: #f5f7fa;
+    border: 1px solid #dce0e6;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    min-height: 46px;
+}
+
+.login-input:focus {
+    border-color: #0d4f8b;
+}
+
+/* 登录按钮 */
+#loginBtn {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #0d4f8b, stop:1 #1a6ec9);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    border: none;
+    border-radius: 24px;
+    min-height: 48px;
+}
+
+#loginBtn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #0a3f70, stop:1 #1560b5);
+}
+
+#loginBtn:disabled {
+    background: #a0b8d0;
+}
+
+/* ---------- 主窗口顶部导航 ---------- */
+#topBar {
+    background: #0d4f8b;
+    min-height: 52px;
+    padding: 0 20px;
+}
+
+#topBarAppName {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 1px;
+}
+
+#accountName {
+    font-size: 13px;
+    color: #ffffff;
+}
+
+#accountAvatar {
+    background: rgba(255, 255, 255, 56);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 15px;
+    min-width: 30px;
+    min-height: 30px;
+    max-width: 30px;
+    max-height: 30px;
+}
+
+#logoutBtn {
+    background: rgba(255, 255, 255, 40);
+    color: #ffffff;
+    font-size: 13px;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 14px;
+}
+
+#logoutBtn:hover {
+    background: rgba(255, 255, 255, 76);
+}
+
+/* ---------- 左侧搜索面板 ---------- */
+#sidebar {
+    background: #ffffff;
+    border-right: 1px solid #e4e7ed;
+    min-width: 340px;
+    max-width: 480px;
+}
+
+#searchInput {
+    background: #f5f7fa;
+    border: 1px solid #dce0e6;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 38px;
+}
+
+#searchInput:focus {
+    border-color: #0d4f8b;
+}
+
+#searchBtn {
+    background: #0d4f8b;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+#searchBtn:hover {
+    background: #0a3f70;
+}
+
+#inputClear {
+    color: #999;
+    font-size: 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+#inputClear:hover {
+    color: #333;
+}
+
+/* 搜索历史标签 */
+.history-tag {
+    background: #f0f2f5;
+    color: #606266;
+    border: none;
+    border-radius: 14px;
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
+.history-tag:hover {
+    background: #e4e7ed;
+    color: #0d4f8b;
+}
+
+/* 配方结果列表 */
+#resultList {
+    border: none;
+    background: #ffffff;
+}
+
+#resultList::item {
+    border-bottom: 1px solid #f0f2f5;
+    padding: 10px 12px;
+}
+
+#resultList::item:hover {
+    background: #f5f7fa;
+}
+
+#resultList::item:selected {
+    background: #e8f0fa;
+    border-left: 3px solid #0d4f8b;
+}
+
+/* 结果卡片内部 */
+.recipe-card {
+    padding: 8px;
+}
+
+.recipe-color-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2332;
+}
+
+.recipe-vehicle {
+    font-size: 12px;
+    color: #909399;
+}
+
+.recipe-sample {
+    font-size: 11px;
+    color: #0d4f8b;
+    background: #e8f0fa;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+/* 列表底部 */
+#listFooter {
+    background: #f5f7fa;
+    color: #909399;
+    font-size: 12px;
+    padding: 10px;
+    border-top: 1px solid #e4e7ed;
+}
+
+/* ---------- 右侧详情面板 ---------- */
+#detailPanel {
+    background: #f5f7fa;
+}
+
+#detailEmpty {
+    color: #909399;
+    font-size: 14px;
+}
+
+/* 详情卡片 */
+.detail-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.detail-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a2332;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.detail-title-line {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a2332;
+}
+
+.detail-color-code {
+    font-size: 13px;
+    color: #606266;
+    margin-left: 8px;
+}
+
+/* 属性小标签 */
+.mini-tag {
+    background: #f0f2f5;
+    color: #606266;
+    font-size: 11px;
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+/* 信息网格 */
+.grid-label {
+    color: #909399;
+    font-size: 13px;
+}
+
+.grid-value {
+    color: #1a2332;
+    font-size: 13px;
+}
+
+/* 色母明细表格 */
+QTableWidget {
+    gridline-color: #f0f2f5;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 13px;
+}
+
+QTableWidget::item {
+    padding: 6px 8px;
+}
+
+QHeaderView::section {
+    background: #f5f7fa;
+    color: #606266;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px;
+    border: none;
+    border-bottom: 1px solid #e4e7ed;
+}
+
+/* 层标题 */
+.layer-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2332;
+    padding: 8px 0;
+}
+
+/* 下载按钮 */
+.layer-download-btn {
+    background: #0d4f8b;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
+.layer-download-btn:hover {
+    background: #0a3f70;
+}
+
+/* 目标总重输入 */
+.layer-total-input {
+    background: #f5f7fa;
+    border: 1px solid #dce0e6;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
+    min-height: 28px;
+    max-width: 120px;
+}
+
+/* 编码体系下拉 */
+#pigmentSystemCombo {
+    background: #f5f7fa;
+    border: 1px solid #dce0e6;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
+    min-height: 28px;
+}
+
+/* ---------- 联想面板 ---------- */
+#suggestPanel {
+    background: #ffffff;
+    border: 1px solid #e4e7ed;
+    border-radius: 10px;
+}
+
+#suggestList {
+    border: none;
+    background: transparent;
+}
+
+#suggestList::item {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f5f7fa;
+}
+
+#suggestList::item:hover {
+    background: #f5f7fa;
+}
+
+.suggest-text {
+    font-size: 14px;
+    color: #1a2332;
+}
+
+.suggest-sub {
+    font-size: 12px;
+    color: #909399;
+    margin-left: 8px;
+}
+
+.suggest-type {
+    font-size: 11px;
+    color: #0d4f8b;
+    background: #e8f0fa;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+/* ---------- Toast 提示 ---------- */
+#toast {
+    background: rgba(0, 0, 0, 180);
+    color: #ffffff;
+    font-size: 13px;
+    border-radius: 8px;
+    padding: 10px 20px;
+}
+
+/* ---------- 滚动条 ---------- */
+QScrollBar:vertical {
+    background: transparent;
+    width: 6px;
+}
+
+QScrollBar::handle:vertical {
+    background: #c0c4cc;
+    border-radius: 3px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #909399;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
