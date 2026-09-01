@@ -40,21 +40,27 @@ jobs:
         cd build-win
         windeployqt WebColorQt.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
 
-    - name: Upload build artifacts
+    - name: Build Inno Setup installer
+      run: |
+        $iscc = Get-ChildItem "C:\Program Files*\Inno Setup 6\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+        if (-not $iscc) { Write-Error "Inno Setup not found"; exit 1 }
+        & $iscc setup.iss
+
+    - name: Upload installer
       uses: actions/upload-artifact@v4
       with:
-        name: WebColorQt-Windows
-        path: build-win/
+        name: 恺祁颜色系统-安装程序
+        path: installer-output/*.exe
         retention-days: 30
 
-    - name: Create release zip
+    - name: Upload portable zip
       run: |
         cd build-win
         7z a ../WebColorQt-Windows.zip *
-
+      
     - name: Upload release package
       uses: actions/upload-artifact@v4
       with:
-        name: WebColorQt-Windows-Zip
+        name: WebColorQt-Windows-Portable
         path: WebColorQt-Windows.zip
         retention-days: 30
