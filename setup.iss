@@ -23,7 +23,9 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
-SetupIconFile=
+SetupIconFile=resources\setup.ico
+WizardImageFile=resources\wizardimage.bmp
+WizardSmallImageFile=resources\wizardsmallimage.bmp
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
