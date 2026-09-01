@@ -40,7 +40,17 @@ jobs:
         cd build-win
         windeployqt WebColorQt.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
 
+    - name: Install Inno Setup Chinese language
+      shell: pwsh
+      run: |
+        $islDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
+        if (-not (Test-Path "$islDir\ChineseSimplified.isl")) {
+          Write-Host "Downloading ChineseSimplified.isl..."
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl" -OutFile "$islDir\ChineseSimplified.isl"
+        }
+
     - name: Build Inno Setup installer
+      shell: pwsh
       run: |
         $iscc = Get-ChildItem "C:\Program Files*\Inno Setup 6\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
         if (-not $iscc) { Write-Error "Inno Setup not found"; exit 1 }
