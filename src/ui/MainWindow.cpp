@@ -23,6 +23,7 @@
 #include <QTimer>
 #include <QScrollArea>
 #include <QSplitter>
+#include <QStackedWidget>
 #include <QJsonArray>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
@@ -78,41 +79,48 @@ void MainWindow::setupUi()
 
     // ===== 顶部导航栏 =====
     auto *topBar = new QWidget;
+    topBar->setObjectName(QStringLiteral("topBar"));
     topBar->setFixedHeight(52);
-    topBar->setStyleSheet(QStringLiteral(
-        "background: #4a9ede; border-bottom: 1px solid #3a8fd4;"));
     setupTopBar(topBar);
     mainLayout->addWidget(topBar);
 
-    // ===== 左右分栏 =====
-    auto *splitter = new QSplitter(Qt::Horizontal);
-    splitter->setHandleWidth(8);
-    splitter->setStyleSheet(QStringLiteral(
-        "QSplitter::handle { background: #f0f2f5; }"));
+    // ===== 下方区域：左侧导航栏 + 内容区 =====
+    auto *bodyWidget = new QWidget;
+    auto *bodyLayout = new QHBoxLayout(bodyWidget);
+    bodyLayout->setContentsMargins(0, 0, 0, 0);
+    bodyLayout->setSpacing(0);
 
-    // 左侧面板
-    auto *sidebar = new QFrame;
-    sidebar->setObjectName(QStringLiteral("sidebarFrame"));
-    sidebar->setFrameShape(QFrame::NoFrame);
-    sidebar->setStyleSheet(QStringLiteral(
-        "#sidebarFrame { background: #ffffff; border: 2px solid #c0c4cc; border-radius: 8px; }"
-        "QScrollBar:vertical { background: #f0f2f5; width: 10px; margin: 0; border-radius: 5px; }"
-        "QScrollBar::handle:vertical { background: #606266; min-height: 30px; border-radius: 5px; }"
-        "QScrollBar::handle:vertical:hover { background: #4a4c50; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"));
-    sidebar->setMinimumWidth(340);
-    sidebar->setMaximumWidth(480);
-    setupSidebar(sidebar);
-    splitter->addWidget(sidebar);
+    // 左侧导航栏
+    auto *navBar = new QWidget;
+    navBar->setObjectName(QStringLiteral("navBar"));
+    navBar->setFixedWidth(72);
+    setupNavBar(navBar);
+    bodyLayout->addWidget(navBar);
 
-    // 右侧详情
-    m_detailWidget = new FormulaDetailWidget;
-    splitter->addWidget(m_detailWidget);
-    splitter->setStretchFactor(0, 0);
-    splitter->setStretchFactor(1, 1);
+    // 内容区（QStackedWidget）
+    m_stack = new QStackedWidget;
 
-    mainLayout->addWidget(splitter);
+    // 页面 0：搜索页（当前主页面内容）
+    auto *searchPage = new QWidget;
+    searchPage->setObjectName(QStringLiteral("searchPage"));
+    setupSearchPage(searchPage);
+    m_stack->addWidget(searchPage);
+
+    // 页面 1：自动 S&C（占位）
+    auto *autoPage = new QWidget;
+    setupPlaceholderPage(autoPage, QStringLiteral("自动 S&C"), QStringLiteral("⚙"));
+    m_stack->addWidget(autoPage);
+
+    // 页面 2：设置（占位）
+    auto *settingsPage = new QWidget;
+    setupPlaceholderPage(settingsPage, QStringLiteral("设置"), QStringLiteral("☰"));
+    m_stack->addWidget(settingsPage);
+
+    bodyLayout->addWidget(m_stack, 1);
+    mainLayout->addWidget(bodyWidget);
+
+    // 默认选中搜索页
+    updateNavSelection(0);
 }
 
 void MainWindow::setupTopBar(QWidget *topBar)
@@ -176,6 +184,111 @@ void MainWindow::setupTopBar(QWidget *topBar)
     userArea->installEventFilter(new ClickFilter(showMenu, userArea));
 
     layout->addWidget(userArea);
+}
+
+void MainWindow::setupNavBar(QWidget *navBar)
+{
+    auto *layout = new QVBoxLayout(navBar);
+    layout->setContentsMargins(0, 12, 0, 12);
+    layout->setSpacing(4);
+
+    struct NavItem {
+        QString icon;
+        QString text;
+    };
+    QVector<NavItem> items = {
+        { QStringLiteral("\U0001F50D"), QStringLiteral("搜索") },
+        { QStringLiteral("\U0001F52C"), QStringLiteral("自动S&C") },
+        { QStringLiteral("\u2699"),     QStringLiteral("设置") },
+    };
+
+    for (int i = 0; i < items.size(); ++i) {
+        auto *btn = new QPushButton(items[i].icon + QStringLiteral("\n") + items[i].text);
+        btn->setObjectName(QStringLiteral("navBtn"));
+        btn->setCheckable(true);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setFixedHeight(64);
+        btn->setProperty("index", i);
+        connect(btn, &QPushButton::clicked, this, [this, i]() { switchPage(i); });
+        layout->addWidget(btn);
+        m_navButtons.append(btn);
+    }
+    layout->addStretch(1);
+}
+
+void MainWindow::setupSearchPage(QWidget *page)
+{
+    auto *layout = new QHBoxLayout(page);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    // 左侧搜索面板
+    auto *splitter = new QSplitter(Qt::Horizontal);
+    splitter->setHandleWidth(8);
+    splitter->setStyleSheet(QStringLiteral(
+        "QSplitter::handle { background: #f0f2f5; }"));
+
+    auto *sidebar = new QFrame;
+    sidebar->setObjectName(QStringLiteral("sidebarFrame"));
+    sidebar->setFrameShape(QFrame::NoFrame);
+    sidebar->setStyleSheet(QStringLiteral(
+        "#sidebarFrame { background: #ffffff; border: 2px solid #c0c4cc; border-radius: 8px; }"
+        "QScrollBar:vertical { background: #f0f2f5; width: 10px; margin: 0; border-radius: 5px; }"
+        "QScrollBar::handle:vertical { background: #606266; min-height: 30px; border-radius: 5px; }"
+        "QScrollBar::handle:vertical:hover { background: #4a4c50; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }"));
+    sidebar->setMinimumWidth(340);
+    sidebar->setMaximumWidth(480);
+    setupSidebar(sidebar);
+    splitter->addWidget(sidebar);
+
+    // 右侧详情
+    m_detailWidget = new FormulaDetailWidget;
+    splitter->addWidget(m_detailWidget);
+    splitter->setStretchFactor(0, 0);
+    splitter->setStretchFactor(1, 1);
+
+    layout->addWidget(splitter);
+}
+
+void MainWindow::setupPlaceholderPage(QWidget *page, const QString &title, const QString &icon)
+{
+    auto *layout = new QVBoxLayout(page);
+    layout->setAlignment(Qt::AlignCenter);
+
+    auto *iconLabel = new QLabel(icon);
+    iconLabel->setAlignment(Qt::AlignCenter);
+    iconLabel->setStyleSheet(QStringLiteral(
+        "font-size: 64px; color: #c0c4cc;"));
+    layout->addWidget(iconLabel);
+
+    auto *titleLabel = new QLabel(title);
+    titleLabel->setAlignment(Qt::AlignCenter);
+    titleLabel->setStyleSheet(QStringLiteral(
+        "font-size: 20px; font-weight: 600; color: #909399; margin-top: 16px;"));
+    layout->addWidget(titleLabel);
+
+    auto *hintLabel = new QLabel(QStringLiteral("功能开发中…"));
+    hintLabel->setAlignment(Qt::AlignCenter);
+    hintLabel->setStyleSheet(QStringLiteral(
+        "font-size: 14px; color: #c0c4cc; margin-top: 8px;"));
+    layout->addWidget(hintLabel);
+}
+
+void MainWindow::switchPage(int index)
+{
+    if (m_stack) {
+        m_stack->setCurrentIndex(index);
+        updateNavSelection(index);
+    }
+}
+
+void MainWindow::updateNavSelection(int index)
+{
+    for (int i = 0; i < m_navButtons.size(); ++i) {
+        m_navButtons[i]->setChecked(i == index);
+    }
 }
 
 void MainWindow::setupSidebar(QWidget *sidebar)
