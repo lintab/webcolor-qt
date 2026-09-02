@@ -5,4 +5,4 @@
 
 // IDI_ICON1 = 1 是标准的应用程序图标 ID
 // 图标会按顺序尝试匹配系统请求的尺寸
-IDI_ICON1 ICON "resources\\setup.ico"
+IDI_ICON1 ICON "setup.ico"
