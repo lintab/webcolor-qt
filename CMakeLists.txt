@@ -72,7 +72,12 @@ else()
     set(MACOSX_ICON "")
 endif()
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCES} ${MACOSX_ICON})
+# Windows 资源文件（嵌入图标到 exe）
+if(WIN32)
+    set(WIN_RESOURCES resources/app.rc)
+endif()
+
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCES} ${MACOSX_ICON} ${WIN_RESOURCES})
 
 if(APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES
