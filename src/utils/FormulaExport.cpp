@@ -3,6 +3,7 @@
    ============================================================ */
 
 #include "FormulaExport.h"
+#include "utils/I18nManager.h"
 #include <QFile>
 #include <QTextStream>
 #include <QDateTime>
@@ -247,12 +248,12 @@ QString fileExtension(Format fmt)
 QString fileFilter(Format fmt)
 {
     switch (fmt) {
-    case Format::Xml: return QStringLiteral("XML 文件 (*.xml)");
-    case Format::Dat: return QStringLiteral("DAT 文件 (*.dat)");
-    case Format::Rez: return QStringLiteral("REZ 文件 (*.rez)");
-    case Format::Txt: return QStringLiteral("TXT 文件 (*.txt)");
+    case Format::Xml: return T("export_xml_files");
+    case Format::Dat: return T("export_dat_files");
+    case Format::Rez: return T("export_rez_files");
+    case Format::Txt: return T("export_txt_files");
     }
-    return QStringLiteral("所有文件 (*)");
+    return T("export_all_files");
 }
 
 bool saveToFile(const QString &filePath, const QString &content)

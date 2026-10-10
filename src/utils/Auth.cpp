@@ -21,6 +21,7 @@ void Auth::setToken(const QString &token)
 {
     QSettings settings;
     settings.setValue(TOKEN_KEY, token);
+    settings.sync();  // 立即同步到磁盘
     emit loginStateChanged(!token.isEmpty());
 }
 
@@ -35,6 +36,7 @@ void Auth::removeToken()
     QSettings settings;
     settings.remove(TOKEN_KEY);
     settings.remove(USER_KEY);
+    settings.sync();  // 立即同步到磁盘
     emit loginStateChanged(false);
 }
 

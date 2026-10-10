@@ -26,6 +26,8 @@ signals:
 private slots:
     void handleLogin();
     void loadCaptcha();
+    /** 阅读弹窗：doc 为 privacy_policy / user_agreement，对应 :/agreement 下的内置正文 */
+    void showAgreement(const QString &doc);
 
 private:
     void setupUi();
@@ -42,9 +44,7 @@ private:
     QLabel    *m_captchaLabel;
     QWidget   *m_captchaRow;
     QCheckBox *m_rememberCheck;
-    QCheckBox *m_agreeCheck;
     QPushButton *m_loginBtn;
-    QLabel    *m_agreeTip;
     QWidget   *m_loadingOverlay;
 
     // 验证码状态

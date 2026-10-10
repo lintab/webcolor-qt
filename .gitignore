@@ -13,3 +13,8 @@ CMakeLists.txt.user
 moc_*.cpp
 ui_*.h
 qrc_*.cpp
+# macOS 拷贝到 NTFS 后残留的 AppleDouble 元数据文件
+._*
+# 本地工具日志与 IDE 数据
+*.log
+.qoder/

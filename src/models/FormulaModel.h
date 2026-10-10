@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QList>
+#include "utils/I18nManager.h"
 
 /** 配方列表行（规范化后的统一结构） */
 struct FormulaRow {
@@ -21,23 +22,29 @@ struct FormulaRow {
     QString colorCode;
     QString colorBias;
     QString brandName;
+    QString brandNameEn;
     QString seriesName;
+    QString seriesNameEn;
     QString modelName;
+    QString modelNameEn;
     QString year;
     QString cover;        // 图片 URL（已拼接完整地址）
     QString imageUrl;
 
-    /** 颜色名称：中文优先再英文 */
+    /** 颜色名称：按界面语言取中/英文 */
     QString displayName() const {
-        return colorName.isEmpty() ? colorNameEn : colorName;
+        return Tn(colorName, colorNameEn);
     }
 
     /** 车辆信息拼接 */
     QString vehicleInfo() const {
         QStringList parts;
-        if (!brandName.isEmpty())  parts << brandName;
-        if (!seriesName.isEmpty()) parts << seriesName;
-        if (!modelName.isEmpty())  parts << modelName;
+        const QString brand = Tn(brandName, brandNameEn);
+        const QString series = Tn(seriesName, seriesNameEn);
+        const QString model = Tn(modelName, modelNameEn);
+        if (!brand.isEmpty())   parts << brand;
+        if (!series.isEmpty())  parts << series;
+        if (!model.isEmpty())   parts << model;
         return parts.join(QStringLiteral(" · "));
     }
 };
@@ -47,6 +54,7 @@ struct PigmentDetailRow {
     int layer = 1;
     QString pigmentCode;
     QString pigmentName;
+    QString pigmentNameEn;
     double weight = 0.0;
     struct { int r = 0; int g = 0; int b = 0; QString hex; } rgb;
 };

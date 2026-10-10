@@ -446,6 +446,21 @@ QHeaderView::section {
     min-height: 28px;
 }
 
+/* QComboBox 弹出列表（macOS 全局 stylesheet 会覆盖原生渲染，需显式指定） */
+QComboBox QAbstractItemView {
+    border: 1px solid #dcdfe6;
+    background: #ffffff;
+    color: #333333;
+    selection-background-color: #e8f0fe;
+    selection-color: #333333;
+    padding: 2px;
+}
+
+QComboBox QAbstractItemView::item {
+    padding: 4px 8px;
+    min-height: 20px;
+}
+
 /* ---------- 联想面板 ---------- */
 #suggestPanel {
     background: #ffffff;

@@ -3,7 +3,9 @@
    ============================================================ */
 
 #include "ProfileDialog.h"
+#include "RegisterWidget.h"
 #include "utils/Auth.h"
+#include "utils/I18nManager.h"
 #include "api/LoginApi.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -37,7 +39,7 @@ QStringList ProfileDialog::brandList()
 {
     return {
         QStringLiteral("猛鹰"), QStringLiteral("雄途"), QStringLiteral("恺祁"),
-        QStringLiteral("施卡斯"), QStringLiteral("蓝彩金"), QStringLiteral("击剑"),
+        QStringLiteral("施卡斯"), QStringLiteral("篮彩星"), QStringLiteral("击剑"),
         QStringLiteral("速航"), QStringLiteral("帕特美"), BRAND_CUSTOM
     };
 }
@@ -45,7 +47,7 @@ QStringList ProfileDialog::brandList()
 ProfileDialog::ProfileDialog(QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle(QStringLiteral("个人资料"));
+    setWindowTitle(T("profile_title"));
     setFixedSize(460, 600);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
@@ -87,7 +89,7 @@ ProfileDialog::ProfileDialog(QWidget *parent)
     if (nickName.isEmpty())
         nickName = m_user.value(QStringLiteral("userName")).toString();
     if (nickName.isEmpty())
-        nickName = QStringLiteral("用");
+        nickName = T("user");
     avatarLabel->setText(nickName.left(1).toUpper());
     avatarLayout->addWidget(avatarLabel);
     mainLayout->addLayout(avatarLayout);
@@ -132,7 +134,7 @@ ProfileDialog::ProfileDialog(QWidget *parent)
     {
         auto *row = new QHBoxLayout;
         row->setContentsMargins(0, 2, 0, 2);
-        auto *labelW = new QLabel(QStringLiteral("用户名"));
+        auto *labelW = new QLabel(T("profile_username"));
         labelW->setFixedWidth(70);
         labelW->setStyleSheet(QStringLiteral("font-size: 13px; color: #909399;"));
         auto *valueW = new QLabel(m_user.value(QStringLiteral("userName")).toString());
@@ -144,45 +146,45 @@ ProfileDialog::ProfileDialog(QWidget *parent)
 
     // 昵称
     m_nickEdit = new QLineEdit;
-    addRow(QStringLiteral("昵称"), m_nickEdit, &m_nickLabel);
+    addRow(T("profile_nickname"), m_nickEdit, &m_nickLabel);
 
     // 手机号
     m_phoneEdit = new QLineEdit;
-    addRow(QStringLiteral("手机号"), m_phoneEdit, &m_phoneLabel);
+    addRow(T("profile_phone"), m_phoneEdit, &m_phoneLabel);
 
     // 邮箱
     m_emailEdit = new QLineEdit;
-    addRow(QStringLiteral("邮箱"), m_emailEdit, &m_emailLabel);
+    addRow(T("profile_email"), m_emailEdit, &m_emailLabel);
 
     // 性别
     m_sexCombo = new QComboBox;
-    m_sexCombo->addItem(QStringLiteral("男"), QStringLiteral("0"));
-    m_sexCombo->addItem(QStringLiteral("女"), QStringLiteral("1"));
-    addRow(QStringLiteral("性别"), m_sexCombo, &m_sexLabel);
+    m_sexCombo->addItem(T("profile_gender_male"), QStringLiteral("0"));
+    m_sexCombo->addItem(T("profile_gender_female"), QStringLiteral("1"));
+    addRow(T("profile_gender"), m_sexCombo, &m_sexLabel);
 
     // 省份
     m_provinceCombo = new QComboBox;
-    m_provinceCombo->addItem(QStringLiteral("请选择"), QString());
+    m_provinceCombo->addItem(T("profile_select"), QString());
     for (const auto &p : provinceList())
-        m_provinceCombo->addItem(p, p);
-    addRow(QStringLiteral("省份"), m_provinceCombo, &m_provinceLabel);
+        m_provinceCombo->addItem(RegisterWidget::provinceDisplayName(p), p);
+    addRow(T("profile_province"), m_provinceCombo, &m_provinceLabel);
 
     // 品牌
     m_brandCombo = new QComboBox;
-    m_brandCombo->addItem(QStringLiteral("请选择"), QString());
+    m_brandCombo->addItem(T("profile_select"), QString());
     for (const auto &b : brandList())
-        m_brandCombo->addItem(b, b);
-    addRow(QStringLiteral("品牌"), m_brandCombo, &m_brandLabel);
+        m_brandCombo->addItem(RegisterWidget::brandDisplayName(b), b);
+    addRow(T("profile_brand"), m_brandCombo, &m_brandLabel);
 
     // 自定义品牌
     m_customBrandEdit = new QLineEdit;
-    m_customBrandEdit->setPlaceholderText(QStringLiteral("请输入自定义品牌名"));
-    addRow(QStringLiteral("自定义品牌"), m_customBrandEdit, &m_customBrandLabel);
+    m_customBrandEdit->setPlaceholderText(T("profile_custom_brand_prompt"));
+    addRow(T("profile_custom_brand"), m_customBrandEdit, &m_customBrandLabel);
 
     // 供应商
     m_supplierEdit = new QLineEdit;
-    m_supplierEdit->setPlaceholderText(QStringLiteral("请输入供应商"));
-    addRow(QStringLiteral("供应商"), m_supplierEdit, &m_supplierLabel);
+    m_supplierEdit->setPlaceholderText(T("profile_supplier_prompt"));
+    addRow(T("profile_supplier"), m_supplierEdit, &m_supplierLabel);
 
     formLayout->addStretch();
     scrollArea->setWidget(scrollWidget);
@@ -212,11 +214,11 @@ ProfileDialog::ProfileDialog(QWidget *parent)
         return btn;
     };
 
-    m_editBtn = makeBtn(QStringLiteral("编辑"), QStringLiteral("#e8f4fd"),
+    m_editBtn = makeBtn(T("profile_edit"), QStringLiteral("#e8f4fd"),
                         QStringLiteral("#0d4f8b"), QStringLiteral("#b8ddf5"));
-    m_saveBtn = makeBtn(QStringLiteral("保存"), QStringLiteral("#4a9ede"),
+    m_saveBtn = makeBtn(T("profile_save"), QStringLiteral("#4a9ede"),
                         QStringLiteral("#ffffff"), QStringLiteral("#4a9ede"));
-    m_cancelBtn = makeBtn(QStringLiteral("取消"), QStringLiteral("#f5f7fa"),
+    m_cancelBtn = makeBtn(T("cancel"), QStringLiteral("#f5f7fa"),
                           QStringLiteral("#606266"), QStringLiteral("#dce0e6"));
     m_saveBtn->setVisible(false);
     m_cancelBtn->setVisible(false);
@@ -272,22 +274,22 @@ void ProfileDialog::fillFormFromUser()
     m_nickLabel->setText(m_user.value(QStringLiteral("nickName")).toString());
     m_nickEdit->setText(m_user.value(QStringLiteral("nickName")).toString());
 
-    m_phoneLabel->setText(m_hasPhone ? phone : QStringLiteral("未绑定"));
+    m_phoneLabel->setText(m_hasPhone ? phone : T("profile_not_bound"));
     m_phoneEdit->setText(phone);
     m_phoneEdit->setEnabled(m_hasPhone);
 
-    m_emailLabel->setText(m_hasEmail ? email : QStringLiteral("未绑定"));
+    m_emailLabel->setText(m_hasEmail ? email : T("profile_not_bound"));
     m_emailEdit->setText(email);
     m_emailEdit->setEnabled(m_hasEmail);
 
     // 性别
     QString sex = m_user.value(QStringLiteral("sex")).toString();
-    m_sexLabel->setText(sex == QStringLiteral("1") ? QStringLiteral("女") : QStringLiteral("男"));
+    m_sexLabel->setText(sex == QStringLiteral("1") ? T("profile_gender_female") : T("profile_gender_male"));
     m_sexCombo->setCurrentIndex(sex == QStringLiteral("1") ? 1 : 0);
 
     // 省份
     QString province = m_user.value(QStringLiteral("province")).toString();
-    m_provinceLabel->setText(province);
+    m_provinceLabel->setText(RegisterWidget::provinceDisplayName(province));
     int pIdx = m_provinceCombo->findData(province);
     m_provinceCombo->setCurrentIndex(pIdx >= 0 ? pIdx : 0);
 
@@ -296,9 +298,9 @@ void ProfileDialog::fillFormFromUser()
     QString customBrand;
     if (brand == BRAND_CUSTOM) {
         customBrand = brand;
-        m_brandLabel->setText(BRAND_CUSTOM);
+        m_brandLabel->setText(RegisterWidget::brandDisplayName(brand));
     } else {
-        m_brandLabel->setText(brand);
+        m_brandLabel->setText(RegisterWidget::brandDisplayName(brand));
     }
     int bIdx = m_brandCombo->findData(brand);
     m_brandCombo->setCurrentIndex(bIdx >= 0 ? bIdx : 0);
@@ -378,7 +380,7 @@ void ProfileDialog::saveProfile()
         data[QStringLiteral("email")] = m_emailEdit->text().trimmed();
 
     m_saveBtn->setEnabled(false);
-    m_saveBtn->setText(QStringLiteral("保存中..."));
+    m_saveBtn->setText(T("profile_saving"));
 
     LoginApi::instance().updateProfile(data,
         [this, data](const QJsonObject &) {
@@ -398,13 +400,13 @@ void ProfileDialog::saveProfile()
 
             fillFormFromUser();
             m_saveBtn->setEnabled(true);
-            m_saveBtn->setText(QStringLiteral("保存"));
+            m_saveBtn->setText(T("profile_save"));
             setEditMode(false);
-            showToast(QStringLiteral("保存成功"));
+            showToast(T("profile_save_success"));
         },
         [this](const QString &errMsg, int) {
             m_saveBtn->setEnabled(true);
-            m_saveBtn->setText(QStringLiteral("保存"));
+            m_saveBtn->setText(T("profile_save"));
             showToast(errMsg, true);
         });
 }

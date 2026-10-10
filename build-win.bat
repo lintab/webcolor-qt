@@ -15,7 +15,9 @@ if %errorlevel% neq 0 (
 
 :: 自动检测 Qt 安装路径
 set "QT_DIR="
-if exist "C:\Qt\6.8.0\msvc2022_64" (
+if exist "D:\新系统\Qt\6.8.2\msvc2022_64" (
+    set "QT_DIR=D:\新系统\Qt\6.8.2\msvc2022_64"
+) else if exist "C:\Qt\6.8.0\msvc2022_64" (
     set "QT_DIR=C:\Qt\6.8.0\msvc2022_64"
 ) else if exist "C:\Qt\6.7.0\msvc2022_64" (
     set "QT_DIR=C:\Qt\6.7.0\msvc2022_64"
@@ -63,6 +65,17 @@ if %errorlevel% neq 0 (
 echo.
 echo [3/3] 打包 Qt 依赖...
 windeployqt WebColorQt.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
+
+:: 拷贝 SDX4 设备驱动 DLL
+echo.
+echo [额外] 拷贝 SDX4 设备驱动...
+if exist "..\resources\sdx4\MAC.dll" (
+    copy /Y "..\resources\sdx4\MAC.dll" "MAC.dll" >nul
+    copy /Y "..\resources\sdx4\libusb-1.0.dll" "libusb-1.0.dll" >nul
+    echo [信息] SDX4 DLL 已拷贝
+) else (
+    echo [警告] 未找到 SDX4 DLL，设备功能将不可用
+)
 
 echo.
 echo ============================================

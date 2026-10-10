@@ -6,6 +6,11 @@
 #include "FormulaDetailWidget.h"
 #include "LoginWidget.h"
 #include "ProfileDialog.h"
+#include "SettingsPage.h"
+#include "BrandSeriesPage.h"
+#include "ColorSearchSettingsPage.h"
+#include "AutoScPage.h"
+#include "UpdateWidget.h"
 #include "api/FormulaApi.h"
 #include "api/LoginApi.h"
 #include "api/HttpClient.h"
@@ -13,6 +18,7 @@
 #include "utils/Auth.h"
 #include "utils/SearchHistory.h"
 #include "utils/SearchGather.h"
+#include "utils/I18nManager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -30,6 +36,9 @@
 #include <QNetworkReply>
 #include <QMenu>
 #include <QEvent>
+#include <QSettings>
+#include <QApplication>
+#include <QScreen>
 #include <functional>
 
 // 点击事件过滤器
@@ -55,10 +64,25 @@ private:
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    setWindowTitle(QStringLiteral("恺祁颜色系统"));
+    setWindowTitle(T("app_title"));
+
+    // 初始尺寸按屏幕可用区域夹取：150% 缩放的 1080 屏放不下 780 逻辑高，
+    // 多出来的部分在屏幕外，左栏底部的搜索按钮怎么滑都看不到，只能靠最大化补救。
+    // 再把窗口对齐可用区域左上角：默认居中会把底部推到任务栏底下。
+    const QRect avail = QApplication::primaryScreen()->availableGeometry();
+    resize(qMin(1200, avail.width()), qMin(780, avail.height()));
+    move(avail.x(), avail.y());
+
+    // 在途请求归零后才能安全销毁旧页面
+    connect(&HttpClient::instance(), &HttpClient::pendingChanged, this,
+            [this](int pending) { if (pending == 0) cleanupRetiredPages(); });
+
     setupUi();
     renderAccount();
     renderHistory();
+
+    // 监听语言切换
+    connect(&I18nManager::instance(), &I18nManager::languageChanged, this, &MainWindow::retranslateUi);
 
     // 监听 token 失效
     connect(&HttpClient::instance(), &HttpClient::tokenExpired, this, [this]() {
@@ -69,6 +93,12 @@ MainWindow::MainWindow(QWidget *parent)
     });
 }
 
+MainWindow::~MainWindow()
+{
+    qDeleteAll(m_retiredPages);
+    m_retiredPages.clear();
+}
+
 void MainWindow::setupUi()
 {
     auto *central = new QWidget;
@@ -77,10 +107,12 @@ void MainWindow::setupUi()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // ===== 顶部导航栏 =====
+    // ===== 顶部导航栏（全宽） =====
     auto *topBar = new QWidget;
     topBar->setObjectName(QStringLiteral("topBar"));
     topBar->setFixedHeight(52);
+    topBar->setStyleSheet(QStringLiteral(
+        "background: #0d4f8b; border-bottom: 1px solid #0a3f70;"));
     setupTopBar(topBar);
     mainLayout->addWidget(topBar);
 
@@ -97,30 +129,62 @@ void MainWindow::setupUi()
     setupNavBar(navBar);
     bodyLayout->addWidget(navBar);
 
-    // 内容区（QStackedWidget）
+    // 内容区（QStackedWidget）——页面统一由 rebuildPages() 构建，语言切换时重建
     m_stack = new QStackedWidget;
+    rebuildPages();
 
-    // 页面 0：搜索页（当前主页面内容）
+    bodyLayout->addWidget(m_stack, 1);
+    mainLayout->addWidget(bodyWidget, 1);
+}
+
+void MainWindow::retireOldPages()
+{
+    while (m_stack->count() > 0) {
+        QWidget *page = m_stack->widget(0);
+        m_stack->removeWidget(page);
+        page->hide();
+        // 立刻 delete 会让仍在途的 HTTP 回调访问已析构的子控件（切换语言时闪退的原因）
+        m_retiredPages.append(page);
+    }
+    cleanupRetiredPages();
+}
+
+void MainWindow::cleanupRetiredPages()
+{
+    if (HttpClient::instance().pendingCount() > 0) return;
+    if (m_retiredPages.isEmpty()) return;
+
+    const QList<QWidget*> pages = m_retiredPages;
+    m_retiredPages.clear();
+    qDeleteAll(pages);
+}
+
+void MainWindow::rebuildPages()
+{
+    const int keepIndex = m_stack->currentIndex();
+
+    retireOldPages();
+
+    // 页面 0：搜索页
     auto *searchPage = new QWidget;
     searchPage->setObjectName(QStringLiteral("searchPage"));
     setupSearchPage(searchPage);
     m_stack->addWidget(searchPage);
 
-    // 页面 1：自动 S&C（占位）
-    auto *autoPage = new QWidget;
-    setupPlaceholderPage(autoPage, QStringLiteral("自动 S&C"), QStringLiteral("⚙"));
-    m_stack->addWidget(autoPage);
+    // 页面 1：品牌车型搜索
+    m_stack->addWidget(new BrandSeriesPage);
 
-    // 页面 2：设置（占位）
-    auto *settingsPage = new QWidget;
-    setupPlaceholderPage(settingsPage, QStringLiteral("设置"), QStringLiteral("☰"));
-    m_stack->addWidget(settingsPage);
+    // 页面 2：自动 S&C
+    m_stack->addWidget(new AutoScPage);
 
-    bodyLayout->addWidget(m_stack, 1);
-    mainLayout->addWidget(bodyWidget);
+    // 页面 3：配方下载设置
+    m_stack->addWidget(new SettingsPage);
 
-    // 默认选中搜索页
-    updateNavSelection(0);
+    // 页面 4：搜色用户配置
+    m_stack->addWidget(new ColorSearchSettingsPage);
+
+    m_stack->setCurrentIndex(keepIndex >= 0 ? keepIndex : 0);
+    updateNavSelection(m_stack->currentIndex());
 }
 
 void MainWindow::setupTopBar(QWidget *topBar)
@@ -128,11 +192,51 @@ void MainWindow::setupTopBar(QWidget *topBar)
     auto *layout = new QHBoxLayout(topBar);
     layout->setContentsMargins(20, 0, 20, 0);
 
-    auto *appName = new QLabel(QStringLiteral("恺祁颜色系统"));
-    appName->setStyleSheet(QStringLiteral(
+    m_appNameLabel = new QLabel(T("app_title"));
+    m_appNameLabel->setStyleSheet(QStringLiteral(
         "color: #ffffff; font-size: 18px; font-weight: 700; letter-spacing: 2px;"));
-    layout->addWidget(appName);
+    layout->addWidget(m_appNameLabel);
     layout->addStretch();
+
+    // 语言切换按钮（图标 + 下拉菜单）
+    m_langBtn = new QPushButton;
+    m_langBtn->setText(QStringLiteral("🌐"));  // 使用地球图标
+    m_langBtn->setCursor(Qt::PointingHandCursor);
+    m_langBtn->setFixedSize(36, 36);
+    m_langBtn->setStyleSheet(QStringLiteral(
+        "QPushButton { border: none; font-size: 18px; background: transparent; }"
+        "QPushButton:hover { background: rgba(255,255,255,0.15); border-radius: 4px; }"));
+
+    // 语言下拉菜单
+    m_langMenu = new QMenu(m_langBtn);
+    m_langMenu->setStyleSheet(QStringLiteral(
+        "QMenu { background: #ffffff; border: 1px solid #e0e3e8; border-radius: 8px; padding: 4px 0; }"
+        "QMenu::item { padding: 8px 24px; font-size: 13px; color: #1a2332; min-width: 80px; }"
+        "QMenu::item:selected { background: #f0f2f5; color: #0d4f8b; }"));
+
+    QString currentLang = I18nManager::instance().currentLanguage();
+
+    // 语言列表：显示名 -> 语言代码
+    auto langs = I18nManager::instance().supportedLanguages();
+    for (auto it = langs.constBegin(); it != langs.constEnd(); ++it) {
+        auto *action = m_langMenu->addAction(it.value());
+        action->setCheckable(true);
+        action->setChecked(currentLang == it.key());
+        connect(action, &QAction::triggered, this, [this, action, code = it.key()]() {
+            I18nManager::instance().setLanguage(code);
+            action->setChecked(true);
+            for (auto *a : m_langMenu->actions()) {
+                if (a != action) a->setChecked(false);
+            }
+        });
+    }
+
+    // 点击按钮弹出菜单
+    connect(m_langBtn, &QPushButton::clicked, this, [this]() {
+        m_langMenu->popup(m_langBtn->mapToGlobal(QPoint(0, m_langBtn->height())));
+    });
+
+    layout->addWidget(m_langBtn);
 
     // 用户区域（头像 + 名称 + 下拉箭头，点击弹出菜单）
     auto *userArea = new QWidget;
@@ -142,7 +246,7 @@ void MainWindow::setupTopBar(QWidget *topBar)
     userAreaLayout->setContentsMargins(0, 0, 0, 0);
     userAreaLayout->setSpacing(6);
 
-    m_accountAvatarLabel = new QLabel(QStringLiteral("用"));
+    m_accountAvatarLabel = new QLabel(T("avatar_char"));
     m_accountAvatarLabel->setAlignment(Qt::AlignCenter);
     m_accountAvatarLabel->setFixedSize(30, 30);
     m_accountAvatarLabel->setStyleSheet(QStringLiteral(
@@ -150,7 +254,7 @@ void MainWindow::setupTopBar(QWidget *topBar)
         "border-radius: 15px;"));
     userAreaLayout->addWidget(m_accountAvatarLabel);
 
-    m_accountNameLabel = new QLabel(QStringLiteral("用户"));
+    m_accountNameLabel = new QLabel(T("user"));
     m_accountNameLabel->setStyleSheet(QStringLiteral(
         "color: #ffffff; font-size: 14px; font-weight: 500;"));
     userAreaLayout->addWidget(m_accountNameLabel);
@@ -160,21 +264,21 @@ void MainWindow::setupTopBar(QWidget *topBar)
     userAreaLayout->addWidget(arrowLabel);
 
     // 下拉菜单
-    auto *userMenu = new QMenu(userArea);
-    userMenu->setStyleSheet(QStringLiteral(
+    m_userMenu = new QMenu(userArea);
+    m_userMenu->setStyleSheet(QStringLiteral(
         "QMenu { background: #ffffff; border: 1px solid #e0e3e8; border-radius: 8px; padding: 4px 0; }"
         "QMenu::item { padding: 8px 24px; font-size: 13px; color: #1a2332; }"
         "QMenu::item:selected { background: #f0f2f5; color: #0d4f8b; }"));
-    userMenu->addAction(QStringLiteral("个人资料"), this, [this]() {
+    m_userMenu->addAction(T("profile"), this, [this]() {
         auto *dlg = new ProfileDialog(this);
         dlg->exec();
     });
-    userMenu->addSeparator();
-    userMenu->addAction(QStringLiteral("退出登录"), this, &MainWindow::handleLogout);
+    m_userMenu->addSeparator();
+    m_userMenu->addAction(T("logout"), this, &MainWindow::handleLogout);
 
     // 点击用户区域弹出菜单（通过 mouseReleaseEvent）
-    auto showMenu = [userArea, userMenu]() {
-        userMenu->popup(userArea->mapToGlobal(QPoint(0, userArea->height())));
+    auto showMenu = [userArea, this]() {
+        m_userMenu->popup(userArea->mapToGlobal(QPoint(0, userArea->height())));
     };
     userArea->setProperty("clickable", true);
     connect(userArea, &QWidget::customContextMenuRequested, userArea, showMenu);
@@ -192,14 +296,15 @@ void MainWindow::setupNavBar(QWidget *navBar)
     layout->setContentsMargins(0, 12, 0, 12);
     layout->setSpacing(4);
 
+    // 搜索 & 自动S&C 按钮（页面切换）
     struct NavItem {
         QString icon;
         QString text;
     };
     QVector<NavItem> items = {
-        { QStringLiteral("\U0001F50D"), QStringLiteral("搜索") },
-        { QStringLiteral("\U0001F52C"), QStringLiteral("自动S&C") },
-        { QStringLiteral("\u2699"),     QStringLiteral("设置") },
+        { QStringLiteral("\U0001F50D"), T("nav_search") },
+        { QStringLiteral("\U0001F4C5"), T("nav_brand") },
+        { QStringLiteral("\U0001F52C"), T("nav_autosc") },
     };
 
     for (int i = 0; i < items.size(); ++i) {
@@ -213,6 +318,39 @@ void MainWindow::setupNavBar(QWidget *navBar)
         layout->addWidget(btn);
         m_navButtons.append(btn);
     }
+
+    // 设置按钮（下拉菜单）
+    m_settingsBtn = new QPushButton(QStringLiteral("\u2699\n") + T("settings"));
+    m_settingsBtn->setObjectName(QStringLiteral("navBtn"));
+    m_settingsBtn->setCursor(Qt::PointingHandCursor);
+    m_settingsBtn->setFixedHeight(64);
+    layout->addWidget(m_settingsBtn);
+
+    m_settingsMenu = new QMenu(m_settingsBtn);
+    m_settingsMenu->setStyleSheet(QStringLiteral(
+        "QMenu { background: #ffffff; border: 1px solid #e0e3e8; border-radius: 8px; padding: 4px 0; }"
+        "QMenu::item { padding: 10px 28px; font-size: 13px; color: #1a2332; min-width: 120px; }"
+        "QMenu::item:selected { background: #f0f2f5; color: #0d4f8b; }"
+        "QMenu::separator { height: 1px; background: #e4e7ed; margin: 4px 12px; }"));
+    m_settingsMenu->addAction(T("formula_download_settings"), this, [this]() {
+        switchPage(3);
+    });
+    m_settingsMenu->addSeparator();
+    m_settingsMenu->addAction(T("color_search_settings"), this, [this]() {
+        switchPage(4);
+    });
+    m_settingsMenu->addSeparator();
+    m_settingsMenu->addAction(T("software_update"), this, [this]() {
+        auto *updateWidget = new UpdateWidget;
+        updateWidget->setAttribute(Qt::WA_DeleteOnClose);
+        updateWidget->show();
+    });
+
+    connect(m_settingsBtn, &QPushButton::clicked, this, [this]() {
+        m_settingsMenu->exec(m_settingsBtn->mapToGlobal(
+            QPoint(m_settingsBtn->width(), 0)));
+    });
+
     layout->addStretch(1);
 }
 
@@ -269,7 +407,7 @@ void MainWindow::setupPlaceholderPage(QWidget *page, const QString &title, const
         "font-size: 20px; font-weight: 600; color: #909399; margin-top: 16px;"));
     layout->addWidget(titleLabel);
 
-    auto *hintLabel = new QLabel(QStringLiteral("功能开发中…"));
+    auto *hintLabel = new QLabel(T("feature_in_development"));
     hintLabel->setAlignment(Qt::AlignCenter);
     hintLabel->setStyleSheet(QStringLiteral(
         "font-size: 14px; color: #c0c4cc; margin-top: 8px;"));
@@ -304,7 +442,7 @@ void MainWindow::setupSidebar(QWidget *sidebar)
     searchLayout->setSpacing(8);
 
     m_searchInput = new QLineEdit;
-    m_searchInput->setPlaceholderText(QStringLiteral("搜索颜色名称、色号(支持多色号)、车型"));
+    m_searchInput->setPlaceholderText(T("search_placeholder"));
     m_searchInput->setStyleSheet(QStringLiteral(
         "QLineEdit { background: #f5f7fa; border: 1px solid #dce0e6; border-radius: 20px; "
         "padding: 8px 14px; font-size: 14px; min-height: 20px; color: #1a2332; }"
@@ -313,7 +451,7 @@ void MainWindow::setupSidebar(QWidget *sidebar)
     connect(m_searchInput, &QLineEdit::textChanged, this, [this](const QString &) { onSearchInput(); });
     searchLayout->addWidget(m_searchInput);
 
-    m_searchBtn = new QPushButton(QStringLiteral("搜索"));
+    m_searchBtn = new QPushButton(T("search_btn"));
     m_searchBtn->setCursor(Qt::PointingHandCursor);
     m_searchBtn->setStyleSheet(QStringLiteral(
         "QPushButton { background: #0d4f8b; color: #ffffff; font-size: 14px; font-weight: 600; "
@@ -351,7 +489,7 @@ void MainWindow::setupSidebar(QWidget *sidebar)
     histLayout->setContentsMargins(0, 0, 0, 0);
     histLayout->setSpacing(6);
     m_historyTags = new QWidget;
-    histLayout->addWidget(new QLabel(QStringLiteral("历史：")));
+    histLayout->addWidget(new QLabel(T("history_label")));
     histLayout->addWidget(m_historyTags);
     histLayout->addStretch();
     m_historyBar->hide();
@@ -381,7 +519,7 @@ void MainWindow::setupSidebar(QWidget *sidebar)
     layout->addWidget(m_resultList, 1);
 
     // 底部状态
-    m_footerLabel = new QLabel(QStringLiteral("输入关键词开始搜索"));
+    m_footerLabel = new QLabel(T("start_search_hint"));
     m_footerLabel->setObjectName(QStringLiteral("listFooter"));
     m_footerLabel->setAlignment(Qt::AlignCenter);
     m_footerLabel->setFixedHeight(32);
@@ -402,7 +540,7 @@ void MainWindow::renderAccount()
     auto user = Auth::instance().getUser();
     QString nick = user.value(QStringLiteral("nickName")).toString(
                    user.value(QStringLiteral("userName")).toString());
-    if (nick.isEmpty()) nick = QStringLiteral("用户");
+    if (nick.isEmpty()) nick = T("user");
     m_accountNameLabel->setText(nick);
     m_accountAvatarLabel->setText(nick.left(1).toUpper());
 }
@@ -437,7 +575,7 @@ void MainWindow::doSearch()
     m_suggestPanel->hide();
     QString k = m_searchInput->text().trimmed();
     if (k.isEmpty()) {
-        showToast(QStringLiteral("请输入搜索关键词"));
+        showToast(T("enter_search_keyword"));
         return;
     }
     SearchHistory::instance().push(k);
@@ -508,16 +646,16 @@ void MainWindow::fetchList(bool append)
 {
     if (m_loading) return;
     if (append && m_noMore) {
-        setFooter(QStringLiteral("— 没有更多了 —"));
+        setFooter(T("no_more"));
         return;
     }
 
     if (!append) {
         m_resultList->clear();
         m_detailWidget->clear();
-        setFooter(QStringLiteral("加载中…"));
+        setFooter(T("loading"));
     } else {
-        setFooter(QStringLiteral("加载中…"));
+        setFooter(T("loading"));
     }
     m_loading = true;
 
@@ -575,25 +713,22 @@ void MainWindow::fetchList(bool append)
 
                 if (!row.colorCode.isEmpty()) {
                     auto *sampleLabel = new QLabel(
-                        QStringLiteral("<span style='color:#909399;font-size:11px;'>色号：</span>"
-                                       "<span style='color:#1a2332;font-size:13px;font-weight:600;'>%1</span>")
-                            .arg(row.colorCode.toHtmlEscaped()));
+                        QStringLiteral("<span style='color:#909399;font-size:11px;'>") + T("color_code_label") + QStringLiteral("</span>")
+                        + QStringLiteral("<span style='color:#1a2332;font-size:13px;font-weight:600;'>%1</span>").arg(row.colorCode.toHtmlEscaped()));
                     sampleLabel->setTextFormat(Qt::RichText);
                     textLayout->addWidget(sampleLabel);
                 }
                 auto *nameLabel = new QLabel(
-                    QStringLiteral("<span style='color:#909399;font-size:11px;'>名称：</span>"
-                                   "<span style='color:#1a2332;font-size:13px;'>%1</span>")
-                        .arg(row.displayName().toHtmlEscaped()));
+                    QStringLiteral("<span style='color:#909399;font-size:11px;'>") + T("color_name_label") + QStringLiteral("</span>")
+                    + QStringLiteral("<span style='color:#1a2332;font-size:13px;'>%1</span>").arg(row.displayName().toHtmlEscaped()));
                 nameLabel->setTextFormat(Qt::RichText);
                 textLayout->addWidget(nameLabel);
 
                 QString vehicle = row.vehicleInfo();
                 if (!vehicle.isEmpty()) {
                     auto *vehicleLabel = new QLabel(
-                        QStringLiteral("<span style='color:#909399;font-size:11px;'>车型：</span>"
-                                       "<span style='color:#606266;font-size:12px;'>%1</span>")
-                            .arg(vehicle.toHtmlEscaped()));
+                        QStringLiteral("<span style='color:#909399;font-size:11px;'>") + T("car_model_label") + QStringLiteral("</span>")
+                        + QStringLiteral("<span style='color:#606266;font-size:12px;'>%1</span>").arg(vehicle.toHtmlEscaped()));
                     vehicleLabel->setTextFormat(Qt::RichText);
                     textLayout->addWidget(vehicleLabel);
                 }
@@ -609,11 +744,11 @@ void MainWindow::fetchList(bool append)
             m_noMore = noMore;
 
             if (rows.isEmpty() && !append && m_total == 0)
-                setFooter(QStringLiteral("未找到匹配的配方"));
+                setFooter(T("no_match_found"));
             else if (noMore)
-                setFooter(QStringLiteral("— 没有更多了 —"));
+                setFooter(T("no_more"));
             else
-                setFooter(QStringLiteral("滚动加载更多"));
+                setFooter(T("scroll_load_more"));
         },
         [this](const QString &errMsg, int) {
             setFooter(errMsg);
@@ -652,12 +787,109 @@ void MainWindow::handleLogout()
     this->close();
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    // 如果已经在关闭过程中，直接接受关闭
+    if (m_isClosing) {
+        QMainWindow::closeEvent(event);
+        return;
+    }
+    
+    // 关闭窗口时自动退出账号（调用登出 API 并清除 token）
+    // 先忽略关闭事件，等待登出 API 完成后再关闭
+    event->ignore();
+    m_isClosing = true;
+    
+    qInfo() << "MainWindow::closeEvent - 调用登出 API";
+    LoginApi::instance().logout(
+        [this](const QJsonObject &) {
+            qInfo() << "登出 API 成功";
+            Auth::instance().removeToken();
+            this->close();  // 登出成功后关闭窗口
+        },
+        [this](const QString &msg, int) {
+            qWarning() << "登出 API 失败:" << msg;
+            Auth::instance().removeToken();
+            this->close();  // 即使失败也关闭窗口
+        }
+    );
+}
+
 void MainWindow::showToast(const QString &msg)
 {
-    QMessageBox::information(this, QStringLiteral("提示"), msg);
+    QMessageBox::information(this, T("info"), msg);
 }
 
 void MainWindow::setFooter(const QString &text)
 {
     m_footerLabel->setText(text);
+}
+
+void MainWindow::retranslateUi()
+{
+    // 窗口标题
+    setWindowTitle(T("app_title"));
+
+    // 顶部栏
+    if (m_appNameLabel) m_appNameLabel->setText(T("app_title"));
+    if (m_accountAvatarLabel) {
+        auto user = Auth::instance().getUser();
+        QString nick = user.value(QStringLiteral("nickName")).toString(
+                       user.value(QStringLiteral("userName")).toString());
+        if (nick.isEmpty()) nick = T("user");
+        m_accountAvatarLabel->setText(nick.left(1).toUpper());
+    }
+
+    // 导航按钮
+    if (m_navButtons.size() >= 3) {
+        m_navButtons[0]->setText(QStringLiteral("\U0001F50D\n") + T("nav_search"));
+        m_navButtons[1]->setText(QStringLiteral("\U0001F4C5\n") + T("nav_brand"));
+        m_navButtons[2]->setText(QStringLiteral("\U0001F52C\n") + T("nav_autosc"));
+    }
+
+    // 设置按钮
+    if (m_settingsBtn) m_settingsBtn->setText(QStringLiteral("\u2699\n") + T("settings"));
+
+    // 重建用户菜单
+    if (m_userMenu) {
+        m_userMenu->clear();
+        m_userMenu->addAction(T("profile"), this, [this]() {
+            auto *dlg = new ProfileDialog(this);
+            dlg->exec();
+        });
+        m_userMenu->addSeparator();
+        m_userMenu->addAction(T("logout"), this, &MainWindow::handleLogout);
+    }
+
+    // 重建设置菜单
+    if (m_settingsMenu) {
+        m_settingsMenu->clear();
+        m_settingsMenu->addAction(T("formula_download_settings"), this, [this]() { switchPage(3); });
+        m_settingsMenu->addSeparator();
+        m_settingsMenu->addAction(T("color_search_settings"), this, [this]() { switchPage(4); });
+        m_settingsMenu->addSeparator();
+        m_settingsMenu->addAction(T("software_update"), this, [this]() {
+            auto *updateWidget = new UpdateWidget;
+            updateWidget->setAttribute(Qt::WA_DeleteOnClose);
+            updateWidget->show();
+        });
+    }
+
+    // 重建语言菜单勾选状态
+    if (m_langMenu) {
+        QString currentLang = I18nManager::instance().currentLanguage();
+        for (auto *action : m_langMenu->actions()) {
+            // 通过检查 action 文本与 supportedLanguages 的映射来确定语言代码
+            auto langs = I18nManager::instance().supportedLanguages();
+            for (auto it = langs.constBegin(); it != langs.constEnd(); ++it) {
+                if (action->text() == it.value()) {
+                    action->setChecked(currentLang == it.key());
+                    break;
+                }
+            }
+        }
+    }
+
+    // 内容页只在构造时读取翻译，按新语言整体重建
+    rebuildPages();
 }

@@ -2,5 +2,9 @@
     <qresource prefix="/">
         <file>styles.css</file>
         <file>logo.png</file>
+        <file>agreement/user_agreement.zh.html</file>
+        <file>agreement/user_agreement.en.html</file>
+        <file>agreement/privacy_policy.zh.html</file>
+        <file>agreement/privacy_policy.en.html</file>
     </qresource>
 </RCC>

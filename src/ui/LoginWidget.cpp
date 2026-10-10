@@ -7,6 +7,7 @@
 #include "RegisterWidget.h"
 #include "api/LoginApi.h"
 #include "utils/Auth.h"
+#include "utils/I18nManager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -20,6 +21,11 @@
 #include <QPainter>
 #include <QLinearGradient>
 #include <QMessageBox>
+#include <QDialog>
+#include <QTextBrowser>
+#include <QFile>
+#include <QApplication>
+#include <QScreen>
 
 static const QString REMEMBER_KEY = QStringLiteral("webcolor_remember");
 
@@ -28,7 +34,7 @@ static const QString REMEMBER_KEY = QStringLiteral("webcolor_remember");
 LoginWidget::LoginWidget(QWidget *parent)
     : QWidget(parent)
 {
-    setWindowTitle(QStringLiteral("恺祁颜色系统 - 登录"));
+    setWindowTitle(T("app_title") + QStringLiteral(" - ") + T("login_btn"));
     setMinimumSize(420, 600);
     setupUi();
     loadRemembered();
@@ -48,30 +54,21 @@ void LoginWidget::setupUi()
     auto *brandLayout = new QVBoxLayout(brandWidget);
     brandLayout->setAlignment(Qt::AlignCenter);
 
-    auto *logoWrap = new QFrame;
-    logoWrap->setFixedSize(84, 84);
-    logoWrap->setStyleSheet(
-        QStringLiteral("background: #ffffff; "
-                       "border: 1px solid #d0dff0; "
-                       "border-radius: 24px;"));
-    auto *logoLayout = new QVBoxLayout(logoWrap);
-    logoLayout->setContentsMargins(0, 0, 0, 0);
-    logoLayout->setAlignment(Qt::AlignCenter);
+    // logo 自身带圆形外廓，不再套一层边框底板
     auto *logoLabel = new QLabel;
     logoLabel->setAlignment(Qt::AlignCenter);
     auto logoPixmap = QPixmap(QStringLiteral(":/logo.png"));
-    logoLabel->setPixmap(logoPixmap.scaled(56, 56, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    logoLayout->addWidget(logoLabel);
+    logoLabel->setPixmap(logoPixmap.scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
-    auto *appNameLabel = new QLabel(QStringLiteral("恺祁颜色系统"));
+    auto *appNameLabel = new QLabel(T("app_title"));
     appNameLabel->setAlignment(Qt::AlignCenter);
     appNameLabel->setStyleSheet(QStringLiteral("font-size: 24px; font-weight: 700; color: #1a2332; letter-spacing: 2px;"));
 
-    auto *sloganLabel = new QLabel(QStringLiteral("专业配色查询系统"));
+    auto *sloganLabel = new QLabel(T("login_subtitle"));
     sloganLabel->setAlignment(Qt::AlignCenter);
     sloganLabel->setStyleSheet(QStringLiteral("font-size: 14px; color: #606266;"));
 
-    brandLayout->addWidget(logoWrap, 0, Qt::AlignCenter);
+    brandLayout->addWidget(logoLabel, 0, Qt::AlignCenter);
     brandLayout->addSpacing(12);
     brandLayout->addWidget(appNameLabel);
     brandLayout->addWidget(sloganLabel);
@@ -84,7 +81,7 @@ void LoginWidget::setupUi()
     cardLayout->setContentsMargins(32, 32, 32, 28);
     cardLayout->setSpacing(0);
 
-    auto *titleLabel = new QLabel(QStringLiteral("账号登录"));
+    auto *titleLabel = new QLabel(T("login_account_title"));
     titleLabel->setObjectName(QStringLiteral("loginTitle"));
     cardLayout->addWidget(titleLabel);
     cardLayout->addSpacing(8);
@@ -97,7 +94,7 @@ void LoginWidget::setupUi()
 
     // 用户名
     m_usernameEdit = new QLineEdit;
-    m_usernameEdit->setPlaceholderText(QStringLiteral("请输入用户名"));
+    m_usernameEdit->setPlaceholderText(T("login_account_placeholder"));
     m_usernameEdit->setStyleSheet(inputStyle);
     cardLayout->addWidget(m_usernameEdit);
     cardLayout->addSpacing(12);
@@ -111,7 +108,7 @@ void LoginWidget::setupUi()
     pwdInner->setContentsMargins(14, 0, 4, 0);
     pwdInner->setSpacing(0);
     m_passwordEdit = new QLineEdit;
-    m_passwordEdit->setPlaceholderText(QStringLiteral("请输入密码"));
+    m_passwordEdit->setPlaceholderText(T("login_password_placeholder"));
     m_passwordEdit->setEchoMode(QLineEdit::Password);
     m_passwordEdit->setStyleSheet(QStringLiteral(
         "QLineEdit { background: transparent; border: none; font-size: 14px; color: #1a2332; }"
@@ -141,7 +138,7 @@ void LoginWidget::setupUi()
     auto *captchaLayout = new QHBoxLayout(m_captchaRow);
     captchaLayout->setContentsMargins(0, 0, 0, 0);
     m_codeEdit = new QLineEdit;
-    m_codeEdit->setPlaceholderText(QStringLiteral("验证码"));
+    m_codeEdit->setPlaceholderText(T("captcha"));
     m_codeEdit->setStyleSheet(inputStyle);
     m_captchaLabel = new QLabel;
     m_captchaLabel->setFixedHeight(36);
@@ -155,47 +152,44 @@ void LoginWidget::setupUi()
     auto *rememberRow = new QWidget;
     auto *rememberLayout = new QHBoxLayout(rememberRow);
     rememberLayout->setContentsMargins(0, 0, 0, 0);
-    m_rememberCheck = new QCheckBox(QStringLiteral("记住我"));
+    m_rememberCheck = new QCheckBox(T("remember_me"));
     rememberLayout->addWidget(m_rememberCheck);
     rememberLayout->addStretch();
     cardLayout->addWidget(rememberRow);
     cardLayout->addSpacing(8);
 
-    // 协议提示
-    m_agreeTip = new QLabel(QStringLiteral("请先勾选同意用户协议与隐私政策"));
-    m_agreeTip->setStyleSheet(QStringLiteral("color: #e74c3c; font-size: 12px;"));
-    m_agreeTip->hide();
-    cardLayout->addWidget(m_agreeTip);
-
     // 登录按钮
-    m_loginBtn = new QPushButton(QStringLiteral("登 录"));
+    m_loginBtn = new QPushButton(T("login_btn_text"));
     m_loginBtn->setCursor(Qt::PointingHandCursor);
+    // 阿拉伯语有字距会打断字母连写，这里单独关掉
+    const QString loginSpacing = I18nManager::instance().currentLanguage() == QStringLiteral("ar")
+        ? QStringLiteral("0px") : QStringLiteral("6px");
     m_loginBtn->setStyleSheet(QStringLiteral(
         "QPushButton { background: #0d4f8b; color: #ffffff; font-size: 16px; font-weight: 600; "
-        "letter-spacing: 6px; border: none; border-radius: 24px; min-height: 44px; }"
+        "letter-spacing: %1; border: none; border-radius: 24px; min-height: 44px; }"
         "QPushButton:hover { background: #0a3f70; }"
         "QPushButton:pressed { background: #082e52; }"
-        "QPushButton:disabled { background: #a0b8d0; }"));
+        "QPushButton:disabled { background: #a0b8d0; }").arg(loginSpacing));
     cardLayout->addWidget(m_loginBtn);
     cardLayout->addSpacing(12);
 
-    // 协议勾选
-    m_agreeCheck = new QCheckBox;
-    auto *agreeLabel = new QLabel(QStringLiteral("已阅读并同意《隐私政策》与《用户协议》"));
-    agreeLabel->setStyleSheet(QStringLiteral("font-size: 12px; color: #909399;"));
+    // 登录即同意条款：不勾选，两处协议名仍是可点击链接
+    auto *agreeLabel = new QLabel;
+    agreeLabel->setTextFormat(Qt::RichText);
+    agreeLabel->setAlignment(Qt::AlignCenter);
+    agreeLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    agreeLabel->setStyleSheet(QStringLiteral(
+        "font-size: 12px; color: #909399; a { color: #0d4f8b; text-decoration: none; }"));
     agreeLabel->setWordWrap(true);
-    auto *agreeLayout = new QHBoxLayout;
-    agreeLayout->setContentsMargins(0, 0, 0, 0);
-    agreeLayout->addWidget(m_agreeCheck);
-    agreeLayout->addWidget(agreeLabel);
-    auto *agreeWidget = new QWidget;
-    agreeWidget->setLayout(agreeLayout);
-    cardLayout->addWidget(agreeWidget);
+    agreeLabel->setText(T("agree_text").arg(
+        QStringLiteral("<a href=\"privacy_policy\">%1</a>").arg(T("agree_privacy_policy")),
+        QStringLiteral("<a href=\"user_agreement\">%1</a>").arg(T("agree_user_agreement"))));
+    connect(agreeLabel, &QLabel::linkActivated, this, &LoginWidget::showAgreement);
+    cardLayout->addWidget(agreeLabel);
     cardLayout->addSpacing(10);
 
     // 注册入口
-    auto *regLabel = new QLabel(QStringLiteral("<span style='color:#909399;font-size:13px;'>还没有账号？</span>"
-                                                "<a href='#' style='font-size:13px;'>立即注册</a>"));
+    auto *regLabel = new QLabel(T("register_link_text"));
     regLabel->setTextFormat(Qt::RichText);
     regLabel->setAlignment(Qt::AlignCenter);
     regLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
@@ -228,7 +222,7 @@ void LoginWidget::handleLogin()
     if (!validate()) return;
 
     m_loginBtn->setEnabled(false);
-    m_loginBtn->setText(QStringLiteral("登录中…"));
+    m_loginBtn->setText(T("logging_in"));
 
     LoginApi::instance().login(
         m_usernameEdit->text().trimmed(),
@@ -241,7 +235,7 @@ void LoginWidget::handleLogin()
 
             saveRemembered();
             m_loginBtn->setEnabled(true);
-            m_loginBtn->setText(QStringLiteral("登 录"));
+            m_loginBtn->setText(T("login_btn_text"));
 
             // 获取用户信息后再切换到主窗口
             LoginApi::instance().getInfo(
@@ -250,14 +244,12 @@ void LoginWidget::handleLogin()
                     Auth::instance().setUser(user);
 
                     auto *mw = new MainWindow;
-                    mw->resize(1200, 780);
                     mw->show();
                     this->close();
                 },
                 [this](const QString &, int) {
                     // getInfo 失败也进入主窗口
                     auto *mw = new MainWindow;
-                    mw->resize(1200, 780);
                     mw->show();
                     this->close();
                 }
@@ -265,7 +257,7 @@ void LoginWidget::handleLogin()
         },
         [this](const QString &errMsg, int) {
             m_loginBtn->setEnabled(true);
-            m_loginBtn->setText(QStringLiteral("登 录"));
+            m_loginBtn->setText(T("login_btn_text"));
             showToast(errMsg);
             if (m_captchaEnabled) loadCaptcha();
         }
@@ -301,6 +293,49 @@ void LoginWidget::loadCaptcha()
     );
 }
 
+void LoginWidget::showAgreement(const QString &doc)
+{
+    const bool isPrivacy = (doc == QLatin1String("privacy_policy"));
+    if (!isPrivacy && doc != QLatin1String("user_agreement")) return;
+
+    // 标题用带书名号的词条，窗口标题里不需要
+    QString title = isPrivacy ? T("agree_privacy_policy") : T("agree_user_agreement");
+    title.remove(QStringLiteral("《")).remove(QStringLiteral("》"));
+
+    // 正文随 exe 打包；当前语言没有对应正文时显示中文版
+    auto readDoc = [&doc](const QString &lang) {
+        QFile f(QStringLiteral(":/agreement/%1.%2.html").arg(doc, lang));
+        if (!f.open(QIODevice::ReadOnly)) return QString();
+        return QString::fromUtf8(f.readAll());
+    };
+    const QString body = [this, &readDoc] {
+        const QString own = readDoc(I18nManager::instance().currentLanguage());
+        return own.isEmpty() ? readDoc(QStringLiteral("zh")) : own;
+    }();
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(title);
+    // 弹窗尺寸夹到屏幕可用区域，150% 缩放下按钮才不会被推到屏幕外
+    const QRect avail = QApplication::primaryScreen()->availableGeometry();
+    dlg.resize(qMin(620, avail.width() - 40), qMin(640, avail.height() - 40));
+
+    auto *lay = new QVBoxLayout(&dlg);
+    lay->setContentsMargins(16, 16, 16, 16);
+    lay->setSpacing(12);
+
+    auto *browser = new QTextBrowser(&dlg);
+    browser->setOpenExternalLinks(false);
+    browser->setHtml(body);
+    lay->addWidget(browser, 1);
+
+    auto *closeBtn = new QPushButton(T("close_btn"), &dlg);
+    closeBtn->setCursor(Qt::PointingHandCursor);
+    connect(closeBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+    lay->addWidget(closeBtn);
+
+    dlg.exec();
+}
+
 void LoginWidget::loadRemembered()
 {
     QSettings settings;
@@ -333,22 +368,17 @@ void LoginWidget::saveRemembered()
 bool LoginWidget::validate()
 {
     if (m_usernameEdit->text().trimmed().isEmpty()) {
-        showToast(QStringLiteral("请输入用户名"));
+        showToast(T("login_account_placeholder"));
         return false;
     }
     if (m_passwordEdit->text().isEmpty()) {
-        showToast(QStringLiteral("请输入密码"));
+        showToast(T("login_password_placeholder"));
         return false;
     }
-    if (!m_agreeCheck->isChecked()) {
-        m_agreeTip->show();
-        return false;
-    }
-    m_agreeTip->hide();
     return true;
 }
 
 void LoginWidget::showToast(const QString &msg)
 {
-    QMessageBox::information(this, QStringLiteral("提示"), msg);
+    QMessageBox::information(this, T("info"), msg);
 }

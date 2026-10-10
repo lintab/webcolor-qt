@@ -3,10 +3,12 @@
    ============================================================ */
 
 #include "FormulaDetailWidget.h"
+#include "SettingsPage.h"
 #include "api/FormulaApi.h"
 #include "api/HttpClient.h"
 #include "models/FormulaModel.h"
 #include "utils/FormulaExport.h"
+#include "utils/I18nManager.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -31,32 +33,89 @@ static const QStringList PIGMENT_SYSTEMS = {
     QStringLiteral("kaiqi"),
     QStringLiteral("shikasi")
 };
-static const QStringList PIGMENT_LABELS = {
-    QStringLiteral("内部编号"),
-    QStringLiteral("猛鹰"),
-    QStringLiteral("雄途"),
-    QStringLiteral("恺祁"),
-    QStringLiteral("施卡斯")
-};
+static QStringList pigmentLabels()
+{
+    return {
+        T("fdetail_sys_internal"),
+        T("fdetail_sys_mengying"),
+        T("fdetail_sys_xiongtu"),
+        T("fdetail_sys_kaiqi"),
+        T("fdetail_sys_shikasi")
+    };
+}
 
+/** 后端 coat_type 存中文规范值（历史数据可能是英文写法），先归一化再按界面语言取词条 */
 static QString coatTypeLabel(const QString &v)
 {
     if (v.isEmpty()) return {};
-    QString upper = v.toUpper();
-    static const QMap<QString, QString> map = {
-        {QStringLiteral("METALLIC"), QStringLiteral("金属漆")},
-        {QStringLiteral("SOLID"),    QStringLiteral("素色漆")},
-        {QStringLiteral("PEARL"),    QStringLiteral("珍珠漆")},
-        {QStringLiteral("MICA"),     QStringLiteral("云母漆")}
+    static const QMap<QString, QString> aliases = {
+        {QStringLiteral("Solid"),            QStringLiteral("素色")},
+        {QStringLiteral("S"),                QStringLiteral("素色")},
+        {QStringLiteral("SOLID"),            QStringLiteral("素色")},
+        {QStringLiteral("Metallic"),         QStringLiteral("银粉")},
+        {QStringLiteral("Metallic / silver"),QStringLiteral("银粉")},
+        {QStringLiteral("M"),                QStringLiteral("银粉")},
+        {QStringLiteral("Pearl"),            QStringLiteral("珍珠")},
+        {QStringLiteral("P"),                QStringLiteral("珍珠")},
+        {QStringLiteral("Mixed"),            QStringLiteral("混合色")},
+        {QStringLiteral("MP"),               QStringLiteral("混合色")},
+        {QStringLiteral("3-stage pearl"),    QStringLiteral("三工序白珍珠")},
+        {QStringLiteral("3C"),               QStringLiteral("三工序白珍珠")},
+        {QStringLiteral("三工序珍珠"),       QStringLiteral("三工序白珍珠")},
+        {QStringLiteral("白珍珠"),           QStringLiteral("三工序白珍珠")},
+        {QStringLiteral("Candy"),            QStringLiteral("糖果色")},
+        {QStringLiteral("3CC"),              QStringLiteral("糖果色")}
     };
-    return map.value(upper, v);
+    const QString key = aliases.value(v.trimmed(), v.trimmed());
+    const QMap<QString, const char *> labels = {
+        {QStringLiteral("素色"),         "autosc_coat_solid"},
+        {QStringLiteral("银粉"),         "autosc_coat_silver"},
+        {QStringLiteral("珍珠"),         "autosc_coat_pearl"},
+        {QStringLiteral("混合色"),       "autosc_coat_mixed"},
+        {QStringLiteral("三工序白珍珠"), "autosc_coat_three_pearl"},
+        {QStringLiteral("糖果色"),       "autosc_coat_candy"}
+    };
+    return labels.contains(key) ? T(labels.value(key)) : key;
+}
+
+/** 后端 color_bias 存固定中文值（偏红/偏浅等），界面按语言显示对应名称 */
+static QString colorBiasLabel(const QString &v)
+{
+    if (v.isEmpty()) return {};
+    const QString key = v.trimmed();
+    const QMap<QString, const char *> labels = {
+        {QStringLiteral("标准"),   "bias_standard"},
+        {QStringLiteral("差异色"), "bias_variant"},
+        {QStringLiteral("偏浅"),   "bias_lighter"},
+        {QStringLiteral("偏深"),   "bias_darker"},
+        {QStringLiteral("偏红"),   "autosc_bias_red"},
+        {QStringLiteral("偏黄"),   "autosc_bias_yellow"},
+        {QStringLiteral("偏蓝"),   "autosc_bias_blue"},
+        {QStringLiteral("偏绿"),   "autosc_bias_green"}
+    };
+    return labels.contains(key) ? T(labels.value(key)) : key;
+}
+
+/** 后端 applicableRegion 存固定的中文枚举值，界面按语言显示对应名称 */
+static QString regionLabel(const QString &v)
+{
+    if (v.isEmpty()) return {};
+    const QMap<QString, const char *> labels = {
+        {QStringLiteral("中国区域"),   "region_china"},
+        {QStringLiteral("国内"),       "region_china"},
+        {QStringLiteral("非中国区域"), "region_outside_china"},
+        {QStringLiteral("境外"),       "region_outside_china"},
+        {QStringLiteral("全球"),       "region_global"},
+        {QStringLiteral("全网"),       "region_global"}
+    };
+    return labels.contains(v.trimmed()) ? T(labels.value(v.trimmed())) : v;
 }
 
 static QString layerLabel(int n)
 {
-    if (n == 1) return QStringLiteral("底层");
-    if (n == 2) return QStringLiteral("面层");
-    return QStringLiteral("第%1层").arg(n);
+    if (n == 1) return T("fdetail_layer_base");
+    if (n == 2) return T("fdetail_layer_top");
+    return T("fdetail_layer_nth").arg(n);
 }
 
 static QString formatWeight(double n)
@@ -106,7 +165,7 @@ FormulaDetailWidget::FormulaDetailWidget(QWidget *parent)
     m_emptyWidget = new QWidget;
     auto *emptyLayout = new QVBoxLayout(m_emptyWidget);
     emptyLayout->setAlignment(Qt::AlignCenter);
-    auto *emptyLabel = new QLabel(QStringLiteral("点击左侧配方查看详情"));
+    auto *emptyLabel = new QLabel(T("start_search_hint"));
     emptyLabel->setObjectName(QStringLiteral("detailEmpty"));
     emptyLabel->setAlignment(Qt::AlignCenter);
     emptyLabel->setStyleSheet(QStringLiteral("color: #909399; font-size: 14px;"));
@@ -147,7 +206,7 @@ void FormulaDetailWidget::loadDetail(int id)
             renderDetail(detail);
         },
         [this](const QString &errMsg, int) {
-            QMessageBox::warning(this, QStringLiteral("错误"), errMsg);
+            QMessageBox::warning(this, T("error"), errMsg);
         }
     );
 }
@@ -208,22 +267,21 @@ void FormulaDetailWidget::renderDetail(const FormulaDetail &detail)
     auto *titleLayout = new QHBoxLayout(titleLine);
     titleLayout->setContentsMargins(0, 0, 0, 0);
     titleLayout->setSpacing(8);
-    QString colorName = f.value(QStringLiteral("colorName")).toString(
-                        f.value(QStringLiteral("colorNameEn")).toString());
+    QString colorName = Tn(f, "colorName", "colorNameEn");
     if (!colorName.isEmpty()) {
         auto *nameLabel = new QLabel(
-            QStringLiteral("<span style='color:#909399;font-size:12px;'>名称：</span>"
-                           "<span style='font-size:18px;font-weight:700;color:#1a2332;'>%1</span>")
-                .arg(colorName.toHtmlEscaped()));
+            QStringLiteral("<span style='color:#909399;font-size:12px;'>%1</span>"
+                           "<span style='font-size:18px;font-weight:700;color:#1a2332;'>%2</span>")
+                .arg(T("fdetail_name_label"), colorName.toHtmlEscaped()));
         nameLabel->setTextFormat(Qt::RichText);
         titleLayout->addWidget(nameLabel);
     }
     QString colorCode = f.value(QStringLiteral("colorCode")).toString();
     if (!colorCode.isEmpty()) {
         auto *codeLabel = new QLabel(
-            QStringLiteral("<span style='color:#909399;font-size:12px;'>色号：</span>"
-                           "<span style='font-size:13px;color:#606266;'>%1</span>")
-                .arg(colorCode.toHtmlEscaped()));
+            QStringLiteral("<span style='color:#909399;font-size:12px;'>%1</span>"
+                           "<span style='font-size:13px;color:#606266;'>%2</span>")
+                .arg(T("color_code_label"), colorCode.toHtmlEscaped()));
         codeLabel->setTextFormat(Qt::RichText);
         titleLayout->addWidget(codeLabel);
     }
@@ -246,20 +304,20 @@ void FormulaDetailWidget::renderDetail(const FormulaDetail &detail)
         tagsLayout->addWidget(tag);
     };
     if (f.value(QStringLiteral("threeStep")).toBool())
-        addTag(QStringLiteral("工艺："), QStringLiteral("三工序"));
+        addTag(T("fdetail_process_label"), T("fdetail_three_coat"));
     QString coatType = f.value(QStringLiteral("coatType")).toString();
-    if (!coatType.isEmpty()) addTag(QStringLiteral("类型："), coatTypeLabel(coatType));
+    if (!coatType.isEmpty()) addTag(T("fdetail_type_label"), coatTypeLabel(coatType));
     QString year = f.value(QStringLiteral("year")).toString();
-    if (!year.isEmpty()) addTag(QStringLiteral("年份："), year + QStringLiteral(" 款"));
+    if (!year.isEmpty()) addTag(T("fdetail_year_label"), year + T("fdetail_year_suffix"));
     QString region = f.value(QStringLiteral("applicableRegion")).toString();
-    if (!region.isEmpty()) addTag(QStringLiteral("适应地区："), region);
+    if (!region.isEmpty()) addTag(T("fdetail_region_label"), regionLabel(region));
     headLayout->addWidget(headRow);
     if (tagsLayout->count() > 0) infoLayout->addWidget(tagsWidget);
     headRowLayout->addWidget(infoWidget, 1);
     m_contentLayout->addWidget(headCard);
 
     // ===== 2. 配方信息卡片 =====
-    auto *infoCard = makeCard(QStringLiteral("配方信息"));
+    auto *infoCard = makeCard(T("fdetail_formula_info"));
     auto *infoCardLayout = qobject_cast<QVBoxLayout *>(infoCard->layout());
     auto *gridWidget = new QWidget;
     auto *gridLayout = new QGridLayout(gridWidget);
@@ -268,21 +326,21 @@ void FormulaDetailWidget::renderDetail(const FormulaDetail &detail)
 
     struct GridPair { QString label; QString value; };
     QList<GridPair> pairs = {
-        {QStringLiteral("品牌"), f.value(QStringLiteral("brandName")).toString()},
-        {QStringLiteral("车系"), f.value(QStringLiteral("seriesName")).toString()},
-        {QStringLiteral("车型"), f.value(QStringLiteral("modelName")).toString()},
-        {QStringLiteral("色号"), colorCode},
-        {QStringLiteral("配方名称"), f.value(QStringLiteral("formulaName")).toString()},
-        {QStringLiteral("颜色属性"), f.value(QStringLiteral("coatType")).toString()},
-        {QStringLiteral("颜色偏向"), f.value(QStringLiteral("colorBias")).toString()},
-        {QStringLiteral("配方类型"), f.value(QStringLiteral("formulaType")).toInt() == 1
-            ? QStringLiteral("客户配方") : f.value(QStringLiteral("formulaType")).toInt() == 0
-            ? QStringLiteral("公司配方") : QString()},
-        {QStringLiteral("产地"), f.value(QStringLiteral("origin")).toString()},
-        {QStringLiteral("年份"), f.value(QStringLiteral("year")).toString()},
-        {QStringLiteral("上传时间"), f.value(QStringLiteral("createdAt")).toString()},
-        {QStringLiteral("更新时间"), f.value(QStringLiteral("updatedAt")).toString()},
-        {QStringLiteral("作者"), f.value(QStringLiteral("submitterNickName")).toString(
+        {T("fdetail_brand_label"), Tn(f, "brandName", "brandNameEn")},
+        {T("fdetail_series_label"), Tn(f, "seriesName", "seriesNameEn")},
+        {T("fdetail_model_label"), Tn(f, "modelName", "modelNameEn")},
+        {T("color_code_label"), colorCode},
+        {T("fdetail_formula_name_label"), f.value(QStringLiteral("formulaName")).toString()},
+        {T("fdetail_coat_type_label"), coatTypeLabel(f.value(QStringLiteral("coatType")).toString())},
+        {T("fdetail_color_bias_label"), colorBiasLabel(f.value(QStringLiteral("colorBias")).toString())},
+        {T("fdetail_formula_type_label"), f.value(QStringLiteral("formulaType")).toInt() == 1
+            ? T("fdetail_customer_formula") : f.value(QStringLiteral("formulaType")).toInt() == 0
+            ? T("fdetail_company_formula") : QString()},
+        {T("fdetail_origin_label"), f.value(QStringLiteral("origin")).toString()},
+        {T("fdetail_year_label"), f.value(QStringLiteral("year")).toString()},
+        {T("fdetail_upload_time_label"), f.value(QStringLiteral("createdAt")).toString()},
+        {T("fdetail_update_time_label"), f.value(QStringLiteral("updatedAt")).toString()},
+        {T("fdetail_author_label"), f.value(QStringLiteral("submitterNickName")).toString(
                                    f.value(QStringLiteral("userName")).toString())},
     };
     // 每行显示两个字段
@@ -290,7 +348,7 @@ void FormulaDetailWidget::renderDetail(const FormulaDetail &detail)
     for (const auto &p : pairs) {
         if (p.value.isEmpty()) continue;
         auto *fieldLabel = new QLabel(
-            QStringLiteral("<span style='color:#909399;font-size:12px;'>%1：</span>"
+            QStringLiteral("<span style='color:#909399;font-size:12px;'>%1</span>"
                            "<span style='color:#1a2332;font-size:13px;font-weight:500;'>%2</span>")
                 .arg(p.label, p.value.toHtmlEscaped()));
         fieldLabel->setTextFormat(Qt::RichText);
@@ -311,13 +369,13 @@ void FormulaDetailWidget::renderDetail(const FormulaDetail &detail)
     auto *pigmentTitleLayout = new QHBoxLayout(pigmentTitleRow);
     pigmentTitleLayout->setContentsMargins(0, 0, 0, 0);
     auto *pigmentTitleLabel = new QLabel(
-        QStringLiteral("配方详情"));
+        T("formula_detail"));
     pigmentTitleLabel->setStyleSheet(QStringLiteral(
         "font-size: 15px; font-weight: 600; color: #1a2332;"));
     pigmentTitleLayout->addWidget(pigmentTitleLabel);
     pigmentTitleLayout->addStretch();
 
-    auto *systemLabel = new QLabel(QStringLiteral("品牌："));
+    auto *systemLabel = new QLabel(T("fdetail_brand_label"));
     systemLabel->setStyleSheet(QStringLiteral("font-size: 13px; color: #606266;"));
     pigmentTitleLayout->addWidget(systemLabel);
 
@@ -335,8 +393,9 @@ void FormulaDetailWidget::renderDetail(const FormulaDetail &detail)
         "border-radius: 6px; selection-background-color: #e8f4fd; selection-color: #0d4f8b; "
         "padding: 4px; }"
         "QComboBox QAbstractItemView::item { padding: 6px 8px; }"));
+    const QStringList labels = pigmentLabels();
     for (int i = 0; i < PIGMENT_SYSTEMS.size(); ++i) {
-        systemCombo->addItem(PIGMENT_LABELS[i], PIGMENT_SYSTEMS[i]);
+        systemCombo->addItem(labels[i], PIGMENT_SYSTEMS[i]);
         if (PIGMENT_SYSTEMS[i] == m_currentPigmentSystem)
             systemCombo->setCurrentIndex(i);
     }
@@ -364,7 +423,7 @@ void FormulaDetailWidget::renderDetail(const FormulaDetail &detail)
     // ===== 4. 备注卡片 =====
     QString remark = f.value(QStringLiteral("remark")).toString();
     if (!remark.isEmpty()) {
-        auto *remarkCard = makeCard(QStringLiteral("备注"));
+        auto *remarkCard = makeCard(T("sc_remark"));
         auto *remarkLayout = qobject_cast<QVBoxLayout *>(remarkCard->layout());
         auto *remarkLabel = new QLabel(remark);
         remarkLabel->setWordWrap(true);
@@ -390,7 +449,7 @@ void FormulaDetailWidget::renderPigmentTable(const QList<PigmentDetailRow> &rows
     layerTitleLayout->addWidget(layerLabelW);
     layerTitleLayout->addStretch();
 
-    auto *downloadBtn = new QPushButton(QStringLiteral("下载配方"));
+    auto *downloadBtn = new QPushButton(T("fdetail_download_formula"));
     downloadBtn->setCursor(Qt::PointingHandCursor);
     downloadBtn->setStyleSheet(QStringLiteral(
         "QPushButton { background: #e8f4fd; color: #0d4f8b; font-size: 13px; font-weight: 600; "
@@ -406,11 +465,11 @@ void FormulaDetailWidget::renderPigmentTable(const QList<PigmentDetailRow> &rows
     // 表格
     auto *table = new QTableWidget;
     table->setColumnCount(5);
-    table->setHorizontalHeaderLabels({QStringLiteral("序号"),
-                                       QStringLiteral("色母编号"),
-                                       QStringLiteral("色母名称"),
-                                       QStringLiteral("用量(克)"),
-                                       QStringLiteral("累计(克)")});
+    table->setHorizontalHeaderLabels({T("fdetail_col_seq"),
+                                       T("fdetail_col_code"),
+                                       T("fdetail_col_name"),
+                                       T("fdetail_col_weight"),
+                                       T("fdetail_col_cum")});
     table->horizontalHeader()->setStretchLastSection(true);
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
@@ -435,7 +494,7 @@ void FormulaDetailWidget::renderPigmentTable(const QList<PigmentDetailRow> &rows
         table->setItem(i, 0, seqItem);
 
         table->setItem(i, 1, new QTableWidgetItem(r.pigmentCode));
-        table->setItem(i, 2, new QTableWidgetItem(r.pigmentName));
+        table->setItem(i, 2, new QTableWidgetItem(Tn(r.pigmentName, r.pigmentNameEn)));
 
         auto *weightItem = new QTableWidgetItem(formatWeight(r.weight));
         weightItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -454,11 +513,11 @@ void FormulaDetailWidget::renderPigmentTable(const QList<PigmentDetailRow> &rows
     auto *footerLayout = new QHBoxLayout(footerRow);
     footerLayout->setContentsMargins(0, 4, 0, 4);
 
-    auto *targetLabel = new QLabel(QStringLiteral("目标总重："));
+    auto *targetLabel = new QLabel(T("fdetail_target_weight"));
     footerLayout->addWidget(targetLabel);
 
     auto *targetInput = new QLineEdit;
-    targetInput->setPlaceholderText(QStringLiteral("按比例换算"));
+    targetInput->setPlaceholderText(T("fdetail_ratio_placeholder"));
     targetInput->setMaximumWidth(120);
     connect(targetInput, &QLineEdit::textChanged, this, [this, table](const QString &text) {
         recalcLayerWeights(table, text);
@@ -469,7 +528,7 @@ void FormulaDetailWidget::renderPigmentTable(const QList<PigmentDetailRow> &rows
     footerLayout->addWidget(unitLabel);
     footerLayout->addStretch();
 
-    auto *sumLabel = new QLabel(QStringLiteral("合计：%1 g").arg(formatWeight(sum)));
+    auto *sumLabel = new QLabel(T("fdetail_total_fmt").arg(formatWeight(sum)));
     sumLabel->setStyleSheet(QStringLiteral("font-weight: 600;"));
     footerLayout->addWidget(sumLabel);
 
@@ -526,7 +585,7 @@ void FormulaDetailWidget::downloadLayerFormula(int layer)
         }
     }
     if (!targetTable) {
-        QMessageBox::warning(this, QStringLiteral("提示"), QStringLiteral("未找到该层色母数据"));
+        QMessageBox::warning(this, T("info"), T("fdetail_no_layer_data"));
         return;
     }
 
@@ -538,7 +597,7 @@ void FormulaDetailWidget::downloadLayerFormula(int layer)
             items.append({code, weight});
     }
     if (items.isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("提示"), QStringLiteral("该层没有可下载的色母"));
+        QMessageBox::warning(this, T("info"), T("fdetail_no_downloadable"));
         return;
     }
 
@@ -561,14 +620,15 @@ void FormulaDetailWidget::downloadLayerFormula(int layer)
     double quantity = 0;
     for (const auto &it : items) quantity += it.amount;
 
-    QString layerTag = (layer == 2) ? QStringLiteral("面层") : QStringLiteral("底层");
+    QString layerTag = (layer == 2) ? T("export_layer_surface") : T("export_layer_base");
     QString timestamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss"));
     QString colorCode = m_currentFormula.value(QStringLiteral("colorCode")).toString(sampleId);
 
-    // 选择保存路径
-    QString defaultName = QStringLiteral("%1_%2_%3").arg(colorCode, layerTag, timestamp);
-    QString filter = QStringLiteral("XML 文件 (*.xml);;DAT 文件 (*.dat);;REZ 文件 (*.rez);;TXT 文件 (*.txt)");
-    QString filePath = QFileDialog::getSaveFileName(this, QStringLiteral("保存配方"), defaultName, filter);
+    // 选择保存路径（使用设置的默认路径）
+    QString savePath = SettingsPage::formulaSavePath();
+    QString defaultName = QStringLiteral("%1/%2_%3_%4").arg(savePath, colorCode, layerTag, timestamp);
+    QString filter = T("fdetail_file_filter");
+    QString filePath = QFileDialog::getSaveFileName(this, T("sc_save_recipe"), defaultName, filter);
     if (filePath.isEmpty()) return;
 
     // 根据扩展名确定格式
@@ -591,8 +651,8 @@ void FormulaDetailWidget::downloadLayerFormula(int layer)
 
     QString content = FormulaExport::buildContent(fmt, opts);
     if (FormulaExport::saveToFile(filePath, content)) {
-        QMessageBox::information(this, QStringLiteral("成功"), QStringLiteral("配方已保存"));
+        QMessageBox::information(this, T("success"), T("fdetail_saved_msg"));
     } else {
-        QMessageBox::warning(this, QStringLiteral("错误"), QStringLiteral("文件保存失败"));
+        QMessageBox::warning(this, T("error"), T("fdetail_save_failed"));
     }
 }

@@ -4,6 +4,7 @@
 
 #include "HttpClient.h"
 #include "utils/Auth.h"
+#include "utils/I18nManager.h"
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -105,46 +106,70 @@ void HttpClient::request(const QString &path, const QString &method,
             reply = m_mgr->deleteResource(req);
     }
 
-    connect(reply, &QNetworkReply::finished, this, [reply, onSuccess, onError]() {
-        reply->deleteLater();
+    ++m_pending;
+    connect(reply, &QNetworkReply::finished, this,
+            [this, reply, onSuccess, onError, reqUrl = req.url()]() {
+        dispatchReply(reply, onSuccess, onError, reqUrl);
 
-        int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        QByteArray raw = reply->readAll();
-
-        // 网络层错误
-        if (reply->error() != QNetworkReply::NoError && raw.isEmpty()) {
-            if (onError) onError(QStringLiteral("网络请求失败，请检查后端服务是否可访问"), -1);
-            return;
-        }
-
-        // 401 token 失效
-        if (httpStatus == 401) {
-            Auth::instance().removeToken();
-            emit HttpClient::instance().tokenExpired();
-            if (onError) onError(QStringLiteral("登录已过期，请重新登录"), 401);
-            return;
-        }
-
-        // 解析 JSON
-        QJsonDocument doc = QJsonDocument::fromJson(raw);
-        QJsonObject body = doc.object();
-
-        if (body.isEmpty() && !raw.isEmpty()) {
-            if (onError) onError(QStringLiteral("后端返回数据格式异常"), -1);
-            return;
-        }
-
-        // 业务失败
-        if (body.contains(QStringLiteral("code"))) {
-            int code = body.value(QStringLiteral("code")).toInt();
-            if (code != 200) {
-                QString msg = body.value(QStringLiteral("msg")).toString();
-                if (msg.isEmpty()) msg = QStringLiteral("业务处理失败");
-                if (onError) onError(msg, code);
-                return;
-            }
-        }
-
-        if (onSuccess) onSuccess(body);
+        // 回调执行完毕后才报空闲，避免销毁中的页面仍被回调访问
+        if (m_pending > 0) --m_pending;
+        emit pendingChanged(m_pending);
     });
+}
+
+void HttpClient::dispatchReply(QNetworkReply *reply,
+                               const Callback &onSuccess,
+                               const ErrorCallback &onError,
+                               const QUrl &reqUrl)
+{
+    reply->deleteLater();
+
+    int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    QByteArray raw = reply->readAll();
+
+    qInfo() << "[HttpClient]" << reqUrl << "HTTP" << httpStatus << "body size:" << raw.size();
+
+    // 网络层错误
+    if (reply->error() != QNetworkReply::NoError && raw.isEmpty()) {
+        qWarning() << "[HttpClient] 网络层错误:" << reply->errorString();
+        if (onError) onError(T("http_network_error"), -1);
+        return;
+    }
+
+    // 401 token 失效
+    if (httpStatus == 401) {
+        Auth::instance().removeToken();
+        emit tokenExpired();
+        if (onError) onError(T("http_session_expired"), 401);
+        return;
+    }
+
+    // 解析 JSON
+    QJsonDocument doc = QJsonDocument::fromJson(raw);
+    QJsonObject body = doc.object();
+
+    if (body.isEmpty() && !raw.isEmpty()) {
+        qWarning() << "[HttpClient] 后端返回非 JSON 数据:" << QByteArray(raw.left(500));
+        if (onError) onError(T("http_bad_response") + QString::fromUtf8(raw.left(200)), -1);
+        return;
+    }
+
+    // 业务失败
+    if (body.contains(QStringLiteral("code"))) {
+        int code = body.value(QStringLiteral("code")).toInt();
+        if (code != 200) {
+            QString msg = body.value(QStringLiteral("msg")).toString();
+            if (msg.isEmpty()) msg = body.value(QStringLiteral("message")).toString();
+            if (msg.isEmpty()) msg = T("http_business_failed");
+            // 业务级别 401 也视为 token 失效
+            if (code == 401) {
+                Auth::instance().removeToken();
+                emit tokenExpired();
+            }
+            if (onError) onError(msg, code);
+            return;
+        }
+    }
+
+    if (onSuccess) onSuccess(body);
 }

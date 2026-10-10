@@ -18,11 +18,20 @@ set(SOURCES
     src/utils/SearchHistory.cpp
     src/utils/SearchGather.cpp
     src/utils/FormulaExport.cpp
+    src/utils/I18nManager.cpp
+    src/device/XriteDevice.cpp
     src/ui/LoginWidget.cpp
     src/ui/MainWindow.cpp
     src/ui/FormulaDetailWidget.cpp
     src/ui/ProfileDialog.cpp
     src/ui/RegisterWidget.cpp
+    src/ui/SettingsPage.cpp
+    src/ui/BrandSeriesPage.cpp
+    src/ui/ColorSearchSettingsPage.cpp
+    src/api/ScApi.cpp
+    src/ui/AutoScPage.cpp
+    src/ui/SpectralCurveChart.cpp
+    src/ui/UpdateWidget.cpp
 )
 
 set(HEADERS
@@ -34,11 +43,20 @@ set(HEADERS
     src/utils/SearchHistory.h
     src/utils/SearchGather.h
     src/utils/FormulaExport.h
+    src/utils/I18nManager.h
+    src/device/XriteDevice.h
     src/ui/LoginWidget.h
     src/ui/MainWindow.h
     src/ui/FormulaDetailWidget.h
     src/ui/ProfileDialog.h
     src/ui/RegisterWidget.h
+    src/ui/SettingsPage.h
+    src/ui/BrandSeriesPage.h
+    src/ui/ColorSearchSettingsPage.h
+    src/api/ScApi.h
+    src/ui/AutoScPage.h
+    src/ui/SpectralCurveChart.h
+    src/ui/UpdateWidget.h
 )
 
 set(RESOURCES
@@ -97,4 +115,24 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
+# 软件更新比对用的版本号只有一个来源：CMake 的 project VERSION
+target_compile_definitions(${PROJECT_NAME} PRIVATE APP_VERSION="${PROJECT_VERSION}")
+
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Widgets Qt6::Network)
+
+# SDX4（XDS4）设备驱动三件套随构建产物放到 exe 同目录，安装包按目录递归拷贝即可带上
+if(WIN32)
+    set(SDX4_DRIVER_DIR ${CMAKE_SOURCE_DIR}/resources/sdx4)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${SDX4_DRIVER_DIR}/MAC.dll"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/MAC.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${SDX4_DRIVER_DIR}/libusb-1.0.dll"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/libusb-1.0.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${SDX4_DRIVER_DIR}/spectro.ini"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/spectro.ini"
+        COMMENT "部署 SDX4 驱动文件到输出目录"
+    )
+endif()

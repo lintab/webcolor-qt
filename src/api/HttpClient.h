@@ -14,6 +14,7 @@
 
 class QNetworkAccessManager;
 class QNetworkReply;
+class QUrl;
 
 class HttpClient : public QObject
 {
@@ -55,11 +56,25 @@ public:
     /** 资源地址补全 */
     static QString resourceUrl(const QString &path);
 
+    /** 正在等待响应的请求数量 */
+    int pendingCount() const { return m_pending; }
+
 signals:
     /** token 失效时发出，供 UI 层监听跳登录 */
     void tokenExpired();
 
+    /** 在途请求数量变化；降到 0 时外部才可以安全销毁旧页面 */
+    void pendingChanged(int pending);
+
 private:
     explicit HttpClient(QObject *parent = nullptr);
+
+    /** 处理已完成的响应，回调页面传入的 onSuccess / onError */
+    void dispatchReply(QNetworkReply *reply,
+                       const Callback &onSuccess,
+                       const ErrorCallback &onError,
+                       const QUrl &reqUrl);
+
     QNetworkAccessManager *m_mgr;
+    int m_pending = 0;
 };

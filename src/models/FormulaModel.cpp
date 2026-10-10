@@ -70,8 +70,11 @@ FormulaRow normalizeFormulaRow(const QJsonObject &row)
     r.colorCode  = row.value(QStringLiteral("colorCode")).toString();
     r.colorBias  = row.value(QStringLiteral("colorBias")).toString();
     r.brandName  = row.value(QStringLiteral("brandName")).toString();
+    r.brandNameEn = row.value(QStringLiteral("brandNameEn")).toString();
     r.seriesName = row.value(QStringLiteral("seriesName")).toString();
+    r.seriesNameEn = row.value(QStringLiteral("seriesNameEn")).toString();
     r.modelName  = row.value(QStringLiteral("modelName")).toString();
+    r.modelNameEn = row.value(QStringLiteral("modelNameEn")).toString();
     r.year       = row.value(QStringLiteral("year")).toString();
 
     QString imgUrl = pickRowImage(row);
@@ -118,6 +121,7 @@ FormulaDetail parseFormulaDetail(const QJsonObject &data)
         row.layer = obj.value(QStringLiteral("layer")).toInt(1);
         row.pigmentCode = obj.value(QStringLiteral("pigmentCode")).toString();
         row.pigmentName = obj.value(QStringLiteral("pigmentName")).toString();
+        row.pigmentNameEn = obj.value(QStringLiteral("pigmentNameEn")).toString();
         row.weight = obj.value(QStringLiteral("weight")).toDouble();
 
         auto rgb = obj.value(QStringLiteral("rgb")).toObject();

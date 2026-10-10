@@ -18,9 +18,22 @@ if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" (
     exit /b 1
 )
 
-:: 检查构建产物
-if not exist "build-win\WebColorQt.exe" (
-    echo [错误] 未找到构建产物，请先运行 build-win.bat
+:: 检查构建产物（与 setup.iss 中的 BuildDir 保持一致：VS 构建输出目录）
+set "BUILDDIR=..\..\webcolor-qt-build-vs\Release"
+if not exist "%BUILDDIR%\WebColorQt.exe" (
+    echo [错误] 未找到构建产物 %BUILDDIR%\WebColorQt.exe
+    echo 请先运行 build-win-vs.bat 完成构建
+    pause
+    exit /b 1
+)
+if not exist "%BUILDDIR%\MAC.dll" (
+    echo [错误] 构建产物缺少 SDX4 驱动文件 MAC.dll
+    echo 请确认 resources\sdx4 下的驱动文件已随构建部署
+    pause
+    exit /b 1
+)
+if not exist "drivers\X-Rite_MAC_Driver_v3.0.0.exe" (
+    echo [错误] 缺少设备驱动安装包 drivers\X-Rite_MAC_Driver_v3.0.0.exe
     pause
     exit /b 1
 )

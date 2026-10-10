@@ -18,6 +18,12 @@ class RegisterWidget : public QWidget
 public:
     explicit RegisterWidget(QWidget *parent = nullptr);
 
+    // 下拉框显示文本：提交给后端的值仍是中文，仅显示文本随语言变化
+    // （注册页与个人资料页共用，避免两份映射走偏）
+    static QString countryDisplayName(const QString &value);
+    static QString provinceDisplayName(const QString &value);
+    static QString brandDisplayName(const QString &value);
+
 signals:
     void backToLogin();
 
