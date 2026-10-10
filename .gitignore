@@ -3,6 +3,8 @@ build-win/
 installer-output/
 *.exe
 *.dll
+# SDX4 测色仪驱动不是构建产物，走 Git LFS 托管（见 .gitattributes），要跟着仓库走
+!resources/sdx4/*.dll
 *.pdb
 build/
 *.user
