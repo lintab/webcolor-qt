@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ============================================
-echo   恺祁颜色系统 - Windows 构建脚本
+echo   KQ Cloud - Windows 构建脚本
 echo ============================================
 echo.
 
@@ -64,7 +64,7 @@ if %errorlevel% neq 0 (
 :: 打包 Qt 依赖
 echo.
 echo [3/3] 打包 Qt 依赖...
-windeployqt WebColorQt.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
+windeployqt KQCloud.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
 
 :: 拷贝 SDX4 设备驱动 DLL
 echo.

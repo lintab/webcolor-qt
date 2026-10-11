@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
-project(WebColorQt VERSION 1.0.0 LANGUAGES CXX)
+# 产物名即 KQCloud.exe：对外程序名是 KQ Cloud（见 setup.iss 与 i18n 的 app_title）
+project(KQCloud VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -100,12 +101,12 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${RESOURCES} ${MACOSX_ICON}
 if(APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_BUNDLE_NAME "恺祁颜色系统"
+        MACOSX_BUNDLE_BUNDLE_NAME "KQ Cloud"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
-        MACOSX_BUNDLE_IDENTIFIER com.kaiqi.webcolorqt
+        MACOSX_BUNDLE_IDENTIFIER com.kaiqi.kqcloud
         MACOSX_BUNDLE_ICON_FILE app.icns
-        MACOSX_BUNDLE_INFO_STRING "恺祁颜色系统 v${PROJECT_VERSION}"
+        MACOSX_BUNDLE_INFO_STRING "KQ Cloud v${PROJECT_VERSION}"
     )
 elseif(WIN32)
     set_target_properties(${PROJECT_NAME} PROPERTIES

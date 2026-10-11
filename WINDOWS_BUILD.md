@@ -42,8 +42,10 @@
 
 3. **运行构建脚本**
    ```
-   build-win.bat
+   build-win-vs.bat
    ```
+   产物在 `D:\kqcloud-build-vs\Release\KQCloud.exe`（VS 生成器 + 纯英文构建目录）。
+   `build-win.bat` 用 NMake 生成器，在中文路径下链接必失败，仅作留档。
 
 4. **打包安装程序**
    ```
@@ -51,7 +53,7 @@
    ```
 
 5. **完成**
-   - 安装程序在 `installer-output\恺祁颜色系统_Setup_1.0.0.exe`
+   - 安装程序在 `installer-output\KQCloud_Setup_1.0.0.exe`
 
 ### 方式二：手动构建
 
@@ -67,7 +69,7 @@ cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="%Q
 nmake
 
 :: 打包依赖
-windeployqt WebColorQt.exe
+windeployqt KQCloud.exe
 
 :: 生成安装程序（需要 Inno Setup）
 "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ..\setup.iss
@@ -77,7 +79,8 @@ windeployqt WebColorQt.exe
 
 | 文件 | 说明 |
 |------|------|
-| `build-win.bat` | 一键构建脚本，自动检测 Qt 路径 |
+| `build-win-vs.bat` | 一键构建脚本（VS 生成器，实测可用） |
+| `build-win.bat` | 旧的一键构建脚本，NMake 生成器，中文路径下链接失败 |
 | `package.bat` | 一键打包安装程序脚本 |
 | `setup.iss` | Inno Setup 安装程序配置 |
 
@@ -90,4 +93,4 @@ A: 打开脚本，修改 `QT_DIR` 的自动检测部分，手动设置你的 Qt 
 A: 需要使用 MSVC 的命令行环境，请从开始菜单打开 "x64 Native Tools Command Prompt"。
 
 **Q: windeployqt 报错？**
-A: 确保 Qt 的 bin 目录在 PATH 中，且 `WebColorQt.exe` 存在于当前目录。
+A: 确保 Qt 的 bin 目录在 PATH 中，且 `KQCloud.exe` 存在于当前目录。

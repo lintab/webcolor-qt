@@ -13,12 +13,12 @@
         ar[QStringLiteral("register_create_account")] = QStringLiteral("إنشاء حساب");
         vi[QStringLiteral("register_create_account")] = QStringLiteral("Tạo tài khoản");
 
-        zh[QStringLiteral("register_subtitle")] = QStringLiteral("加入恺祁颜色系统");
-        en[QStringLiteral("register_subtitle")] = QStringLiteral("Join the Kaiqi Color System");
-        ru[QStringLiteral("register_subtitle")] = QStringLiteral("Присоединяйтесь к системе цветов Kaiqi");
-        fr[QStringLiteral("register_subtitle")] = QStringLiteral("Rejoignez le système de couleurs Kaiqi");
-        ar[QStringLiteral("register_subtitle")] = QStringLiteral("انضم إلى نظام الألوان Kaiqi");
-        vi[QStringLiteral("register_subtitle")] = QStringLiteral("Tham gia Hệ thống màu Kaiqi");
+        zh[QStringLiteral("register_subtitle")] = QStringLiteral("加入 KQ Cloud");
+        en[QStringLiteral("register_subtitle")] = QStringLiteral("Join KQ Cloud");
+        ru[QStringLiteral("register_subtitle")] = QStringLiteral("Присоединяйтесь к KQ Cloud");
+        fr[QStringLiteral("register_subtitle")] = QStringLiteral("Rejoignez KQ Cloud");
+        ar[QStringLiteral("register_subtitle")] = QStringLiteral("انضم إلى KQ Cloud");
+        vi[QStringLiteral("register_subtitle")] = QStringLiteral("Tham gia KQ Cloud");
 
 // ===== 注册方式切换 =====
         zh[QStringLiteral("register_phone_tab")] = QStringLiteral("手机号注册");

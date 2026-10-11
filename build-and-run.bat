@@ -45,7 +45,7 @@ if %errorlevel% neq 0 (
 :: 打包 Qt 依赖
 echo.
 echo [3/3] 打包 Qt 依赖...
-windeployqt WebColorQt.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
+windeployqt KQCloud.exe --no-translations --no-system-d3d-compiler --no-opengl-sw
 
 echo.
 echo ============================================
@@ -54,5 +54,5 @@ echo   输出目录: build-win\
 echo ============================================
 
 :: 直接启动程序
-echo [信息] 启动 WebColorQt...
-start "" "WebColorQt.exe"
+echo [信息] 启动 KQCloud...
+start "" "KQCloud.exe"

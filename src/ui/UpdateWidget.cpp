@@ -239,7 +239,7 @@ void UpdateWidget::startDownload()
 
     QString fileName = target.path().section(QLatin1Char('/'), -1);
     if (!fileName.endsWith(QLatin1String(".exe"), Qt::CaseInsensitive)) {
-        fileName = QStringLiteral("WebColorSetup.exe");
+        fileName = QStringLiteral("KQCloudSetup.exe");
     }
 
     QDir dir(QDir::tempPath());
@@ -331,7 +331,11 @@ void UpdateWidget::launchInstaller()
     if (m_installerPath.isEmpty() || !QFileInfo::exists(m_installerPath)) return;
 
     abortDownload();
-    if (QProcess::startDetached(m_installerPath, QStringList(),
+    // /KEEPLOGIN：让安装程序跳过「装完清除本机账号密码」那一步（见 setup.iss 的 CurStepChanged），
+    // 软件内更新不该把用户从登录态里踢出去；手动双击安装包没这个参数，登录页才会清空。
+    QStringList installerArgs;
+    installerArgs << QStringLiteral("/KEEPLOGIN");
+    if (QProcess::startDetached(m_installerPath, installerArgs,
                                 QFileInfo(m_installerPath).absolutePath())) {
         setStatus(T("upd_launching"), COLOR_OK);
         QApplication::quit();

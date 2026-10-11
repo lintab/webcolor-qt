@@ -38,6 +38,9 @@ void messageHandler(QtMsgType type, const QMessageLogContext &context, const QSt
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    // applicationName 决定 QSettings 路径（HKCU\Software\KaiqiChemical\恺祁颜色系统），
+    // 语言、记住的账号、保存路径、搜索历史都存在这里；改名会让这些设置清零，
+    // 所以这里保留旧值，对外显示名走 i18n 的 app_title（现为 KQ Cloud）。
     app.setApplicationName("恺祁颜色系统");
     app.setOrganizationName("KaiqiChemical");
     app.setApplicationVersion(QStringLiteral(APP_VERSION));

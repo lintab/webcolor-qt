@@ -76,7 +76,7 @@ void I18nManager::loadLanguage(const QString &langCode)
         // ============ 中文 zh（界面原文，作为默认语言与回退）============
         auto &zh = langMap[QStringLiteral("zh")];
         // -- MainWindow --
-        zh[QStringLiteral("app_title")] = QStringLiteral("恺祁颜色系统");
+        zh[QStringLiteral("app_title")] = QStringLiteral("KQ Cloud");
         zh[QStringLiteral("user")] = QStringLiteral("用户");
         zh[QStringLiteral("avatar_char")] = QStringLiteral("用");
         zh[QStringLiteral("profile")] = QStringLiteral("个人资料");
@@ -95,7 +95,7 @@ void I18nManager::loadLanguage(const QString &langCode)
         zh[QStringLiteral("cancel")] = QStringLiteral("取消");
 
         // -- LoginWidget --
-        zh[QStringLiteral("login_title")] = QStringLiteral("恺祁颜色系统");
+        zh[QStringLiteral("login_title")] = QStringLiteral("KQ Cloud");
         zh[QStringLiteral("login_subtitle")] = QStringLiteral("专业汽车颜色管理平台");
         zh[QStringLiteral("login_account_placeholder")] = QStringLiteral("请输入账号");
         zh[QStringLiteral("login_password_placeholder")] = QStringLiteral("请输入密码");
@@ -290,7 +290,7 @@ void I18nManager::loadLanguage(const QString &langCode)
         // ============ 英语 en ============
         auto &en = langMap[QStringLiteral("en")];
         // -- MainWindow --
-        en[QStringLiteral("app_title")] = QStringLiteral("Kaiqi Color System");
+        en[QStringLiteral("app_title")] = QStringLiteral("KQ Cloud");
         en[QStringLiteral("user")] = QStringLiteral("User");
         en[QStringLiteral("avatar_char")] = QStringLiteral("U");
         en[QStringLiteral("profile")] = QStringLiteral("Profile");
@@ -309,7 +309,7 @@ void I18nManager::loadLanguage(const QString &langCode)
         en[QStringLiteral("cancel")] = QStringLiteral("Cancel");
 
         // -- LoginWidget --
-        en[QStringLiteral("login_title")] = QStringLiteral("Kaiqi Color System");
+        en[QStringLiteral("login_title")] = QStringLiteral("KQ Cloud");
         en[QStringLiteral("login_subtitle")] = QStringLiteral("Professional automotive color management platform");
         en[QStringLiteral("login_account_placeholder")] = QStringLiteral("Please enter account");
         en[QStringLiteral("login_password_placeholder")] = QStringLiteral("Please enter password");
@@ -503,7 +503,7 @@ void I18nManager::loadLanguage(const QString &langCode)
 
         // ============ 俄语 ru ============
         auto &ru = langMap[QStringLiteral("ru")];
-        ru[QStringLiteral("app_title")] = QStringLiteral("Система цветов Kaiqi");
+        ru[QStringLiteral("app_title")] = QStringLiteral("KQ Cloud");
         ru[QStringLiteral("user")] = QStringLiteral("Пользователь");
         ru[QStringLiteral("avatar_char")] = QStringLiteral("П");
         ru[QStringLiteral("profile")] = QStringLiteral("Профиль");
@@ -520,7 +520,7 @@ void I18nManager::loadLanguage(const QString &langCode)
         ru[QStringLiteral("logout_confirm_text")] = QStringLiteral("Вы уверены, что хотите выйти?");
         ru[QStringLiteral("confirm")] = QStringLiteral("Подтвердить");
         ru[QStringLiteral("cancel")] = QStringLiteral("Отмена");
-        ru[QStringLiteral("login_title")] = QStringLiteral("Система цветов Kaiqi");
+        ru[QStringLiteral("login_title")] = QStringLiteral("KQ Cloud");
         ru[QStringLiteral("login_subtitle")] = QStringLiteral("Профессиональная платформа управления цветами");
         ru[QStringLiteral("login_account_placeholder")] = QStringLiteral("Введите аккаунт");
         ru[QStringLiteral("login_password_placeholder")] = QStringLiteral("Введите пароль");
@@ -692,7 +692,7 @@ void I18nManager::loadLanguage(const QString &langCode)
 
         // ============ 法语 fr ============
         auto &fr = langMap[QStringLiteral("fr")];
-        fr[QStringLiteral("app_title")] = QStringLiteral("Système de couleurs Kaiqi");
+        fr[QStringLiteral("app_title")] = QStringLiteral("KQ Cloud");
         fr[QStringLiteral("user")] = QStringLiteral("Utilisateur");
         fr[QStringLiteral("avatar_char")] = QStringLiteral("U");
         fr[QStringLiteral("profile")] = QStringLiteral("Profil");
@@ -709,7 +709,7 @@ void I18nManager::loadLanguage(const QString &langCode)
         fr[QStringLiteral("logout_confirm_text")] = QStringLiteral("Voulez-vous vraiment vous déconnecter ?");
         fr[QStringLiteral("confirm")] = QStringLiteral("Confirmer");
         fr[QStringLiteral("cancel")] = QStringLiteral("Annuler");
-        fr[QStringLiteral("login_title")] = QStringLiteral("Système de couleurs Kaiqi");
+        fr[QStringLiteral("login_title")] = QStringLiteral("KQ Cloud");
         fr[QStringLiteral("login_subtitle")] = QStringLiteral("Plateforme professionnelle de gestion des couleurs");
         fr[QStringLiteral("login_account_placeholder")] = QStringLiteral("Entrez le compte");
         fr[QStringLiteral("login_password_placeholder")] = QStringLiteral("Entrez le mot de passe");
@@ -881,7 +881,7 @@ void I18nManager::loadLanguage(const QString &langCode)
 
         // ============ 阿拉伯语 ar ============
         auto &ar = langMap[QStringLiteral("ar")];
-        ar[QStringLiteral("app_title")] = QStringLiteral("نظام ألوان كايكي");
+        ar[QStringLiteral("app_title")] = QStringLiteral("KQ Cloud");
         ar[QStringLiteral("user")] = QStringLiteral("المستخدم");
         ar[QStringLiteral("avatar_char")] = QStringLiteral("م");
         ar[QStringLiteral("profile")] = QStringLiteral("الملف الشخصي");
@@ -898,7 +898,7 @@ void I18nManager::loadLanguage(const QString &langCode)
         ar[QStringLiteral("logout_confirm_text")] = QStringLiteral("هل أنت متأكد من تسجيل الخروج؟");
         ar[QStringLiteral("confirm")] = QStringLiteral("تأكيد");
         ar[QStringLiteral("cancel")] = QStringLiteral("إلغاء");
-        ar[QStringLiteral("login_title")] = QStringLiteral("نظام ألوان كايكي");
+        ar[QStringLiteral("login_title")] = QStringLiteral("KQ Cloud");
         ar[QStringLiteral("login_subtitle")] = QStringLiteral("منصة احترافية لإدارة الألوان");
         ar[QStringLiteral("login_account_placeholder")] = QStringLiteral("أدخل الحساب");
         ar[QStringLiteral("login_password_placeholder")] = QStringLiteral("أدخل كلمة المرور");
@@ -1070,7 +1070,7 @@ void I18nManager::loadLanguage(const QString &langCode)
 
         // ============ 越南语 vi ============
         auto &vi = langMap[QStringLiteral("vi")];
-        vi[QStringLiteral("app_title")] = QStringLiteral("Hệ thống màu Kaiqi");
+        vi[QStringLiteral("app_title")] = QStringLiteral("KQ Cloud");
         vi[QStringLiteral("user")] = QStringLiteral("Người dùng");
         vi[QStringLiteral("avatar_char")] = QStringLiteral("N");
         vi[QStringLiteral("profile")] = QStringLiteral("Hồ sơ");
@@ -1087,7 +1087,7 @@ void I18nManager::loadLanguage(const QString &langCode)
         vi[QStringLiteral("logout_confirm_text")] = QStringLiteral("Bạn có chắc chắn muốn đăng xuất?");
         vi[QStringLiteral("confirm")] = QStringLiteral("Xác nhận");
         vi[QStringLiteral("cancel")] = QStringLiteral("Hủy");
-        vi[QStringLiteral("login_title")] = QStringLiteral("Hệ thống màu Kaiqi");
+        vi[QStringLiteral("login_title")] = QStringLiteral("KQ Cloud");
         vi[QStringLiteral("login_subtitle")] = QStringLiteral("Nền tảng quản lý màu chuyên nghiệp");
         vi[QStringLiteral("login_account_placeholder")] = QStringLiteral("Nhập tài khoản");
         vi[QStringLiteral("login_password_placeholder")] = QStringLiteral("Nhập mật khẩu");
